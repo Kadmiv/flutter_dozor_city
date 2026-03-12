@@ -43,6 +43,7 @@ dependencies:
   flutter_map_cancellable_tile_provider: ^3.0.0
   latlong2: ^0.9.1
   http: ^1.2.1
+  get_it: ^9.2.1
 
 
 dev_dependencies:

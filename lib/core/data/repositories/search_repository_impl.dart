@@ -16,8 +16,8 @@ class SearchRepositoryImpl implements SearchRepository {
   Future<SelectedPoint> getCurrentLocation() async {
     return const SelectedPoint(
       label: 'Поточне місцезнаходження',
-      lat: 50.25465,
-      lng: 28.65867,
+      lat: 0.0,
+      lng: 0.0,
       source: SelectedPointSource.gps,
     );
   }

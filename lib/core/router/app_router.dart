@@ -1,4 +1,5 @@
-import 'package:flutter_dozor_city/core/di/app_scope.dart';
+import 'package:flutter_dozor_city/core/di/injector.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
 import 'package:flutter_dozor_city/core/router/feature_router.dart';
 import 'package:flutter_dozor_city/features/city_selection/presentation/router/city_selection_router.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/router/main_map_router.dart';
@@ -6,17 +7,18 @@ import 'package:flutter_dozor_city/features/point_select/presentation/router/poi
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
-  AppRouter({required AppScope scope}) : _scope = scope {
+  AppRouter() {
     final routers = <FeatureRouter>[
-      CitySelectionRouter(scope: scope),
-      MainMapRouter(scope: scope),
-      PointSelectRouter(scope: scope),
+      const CitySelectionRouter(),
+      const MainMapRouter(),
+      const PointSelectRouter(),
     ];
+    final sessionRepository = injector<SessionRepository>();
     _config = GoRouter(
       initialLocation: '/main-map/search',
-      refreshListenable: _scope.sessionRepository,
+      refreshListenable: sessionRepository,
       redirect: (context, state) {
-        final hasCity = _scope.sessionRepository.hasSelectedCity;
+        final hasCity = sessionRepository.hasSelectedCity;
         final isSelectCity = state.matchedLocation == '/select-city';
 
         if (!hasCity && !isSelectCity) {
@@ -33,7 +35,6 @@ class AppRouter {
     );
   }
 
-  final AppScope _scope;
   late final GoRouter _config;
 
   GoRouter get config => _config;

@@ -10,6 +10,7 @@ class GoogleMapControllerAdapter implements MapController {
     zoom: 12.5,
   );
   List<MapMarkerData> _markers = const [];
+  AppMapCamera? _pendingCamera;
   gmaps.GoogleMapController? _controller;
 
   @override
@@ -20,6 +21,11 @@ class GoogleMapControllerAdapter implements MapController {
 
   void bind(gmaps.GoogleMapController controller) {
     _controller = controller;
+    final pending = _pendingCamera;
+    if (pending != null) {
+      _pendingCamera = null;
+      setCamera(pending);
+    }
   }
 
   @override
@@ -34,7 +40,12 @@ class GoogleMapControllerAdapter implements MapController {
   @override
   Future<void> setCamera(AppMapCamera camera) async {
     _camera = camera;
-    await _controller?.animateCamera(
+    final controller = _controller;
+    if (controller == null) {
+      _pendingCamera = camera;
+      return;
+    }
+    await controller.moveCamera(
       gmaps.CameraUpdate.newCameraPosition(
         gmaps.CameraPosition(
           target: gmaps.LatLng(camera.centerLat, camera.centerLng),

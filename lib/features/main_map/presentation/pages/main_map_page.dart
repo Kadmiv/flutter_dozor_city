@@ -112,10 +112,6 @@ class _MainMapPageState extends State<MainMapPage> {
     widget.liveTrackingCubit
       ..stop()
       ..start(selectedCity.id);
-    final camera = widget.mainMapCubit.state.camera;
-    if (camera != null) {
-      widget.mapController.setCamera(camera);
-    }
   }
 
   Future<void> _openRoutesSheet(int transportType) async {
@@ -217,6 +213,17 @@ class _MainMapPageState extends State<MainMapPage> {
               widget.liveTrackingCubit.updateFilters(
                 routeIds.isEmpty ? null : routeIds,
               );
+            },
+          ),
+          BlocListener<MainMapCubit, MainMapState>(
+            listenWhen: (previous, current) =>
+                previous.city?.id != current.city?.id ||
+                (previous.camera == null && current.camera != null),
+            listener: (context, state) {
+              final camera = state.camera;
+              if (camera != null) {
+                widget.mapController.setCamera(camera);
+              }
             },
           ),
         ],

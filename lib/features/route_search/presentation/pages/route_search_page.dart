@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dozor_city/core/di/app_scope.dart';
+import 'package:flutter_dozor_city/core/di/injector.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/search_repository.dart';
 import 'package:flutter_dozor_city/core/router/app_route_names.dart';
 import 'package:flutter_dozor_city/features/point_select/domain/usecases/get_current_location_use_case.dart';
 import 'package:flutter_dozor_city/features/point_select/domain/usecases/search_address_suggestions_use_case.dart';
@@ -142,16 +143,15 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
   }
 
   Future<void> _pickPoint(BuildContext context, {required bool isStart}) async {
-    final scope = context.read<AppScope>();
     final point = await showDialog<SelectedPoint>(
       context: context,
       builder: (_) => PointSelectPage(
         cubit: PointSelectCubit(
           searchAddressSuggestionsUseCase: SearchAddressSuggestionsUseCase(
-            scope.searchRepository,
+            injector<SearchRepository>(),
           ),
           getCurrentLocationUseCase: GetCurrentLocationUseCase(
-            scope.searchRepository,
+            injector<SearchRepository>(),
           ),
         ),
       ),

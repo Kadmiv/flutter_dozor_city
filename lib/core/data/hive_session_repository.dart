@@ -97,7 +97,7 @@ class HiveSessionRepository extends SessionRepository {
     );
   }
 
-  static String _routesCacheHashKey(String cityId) => 'routes_cache_hash:$cityId';
+  static String _routesCacheHashKey(String cityId) => 'routes_cache_hash_v2:$cityId';
   static String _mapCameraKey(String cityId) => 'map_camera:$cityId';
   static String _uiFlagKey(String key) => 'ui_flag:$key';
 }

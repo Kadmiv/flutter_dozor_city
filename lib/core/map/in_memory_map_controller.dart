@@ -4,9 +4,9 @@ import 'package:flutter_dozor_city/core/map/map_marker_data.dart';
 
 class InMemoryMapController implements MapController {
   AppMapCamera _camera = const AppMapCamera(
-    centerLat: 50.25465,
-    centerLng: 28.65867,
-    zoom: 12.5,
+    centerLat: 0.0,
+    centerLng: 0.0,
+    zoom: 12.0,
   );
   List<MapMarkerData> _markers = const [];
 

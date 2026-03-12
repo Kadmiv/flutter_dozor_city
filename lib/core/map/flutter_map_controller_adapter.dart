@@ -14,6 +14,7 @@ class FlutterMapControllerAdapter implements MapController {
   );
   List<MapMarkerData> _markers = const [];
   bool _isMapReady = false;
+  AppMapCamera? _pendingCamera;
 
   @override
   AppMapCamera get camera => _camera;
@@ -23,6 +24,11 @@ class FlutterMapControllerAdapter implements MapController {
 
   void onMapReady() {
     _isMapReady = true;
+    final pending = _pendingCamera;
+    if (pending != null) {
+      _pendingCamera = null;
+      setCamera(pending);
+    }
   }
 
   @override
@@ -33,6 +39,8 @@ class FlutterMapControllerAdapter implements MapController {
         ll.LatLng(camera.centerLat, camera.centerLng),
         camera.zoom,
       );
+    } else {
+      _pendingCamera = camera;
     }
   }
 

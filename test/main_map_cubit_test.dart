@@ -70,7 +70,10 @@ class _FakeCityRepository implements CityRepository {
   Future<List<City>> getCities() async => const [];
 
   @override
-  Future<List<VehicleEntity>> getCityVehicles(String cityId) async => const [];
+  Future<List<VehicleEntity>> getCityVehicles(
+    String cityId, {
+    List<String>? routeIds,
+  }) async => const [];
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dozor_city/core/di/app_scope.dart';
 import 'package:flutter_dozor_city/core/router/app_router.dart';
 import 'package:flutter_dozor_city/core/theme/app_theme.dart';
 
 class DozorCityApp extends StatefulWidget {
-  const DozorCityApp({super.key, required this.scope});
-
-  final AppScope scope;
+  const DozorCityApp({super.key});
 
   @override
   State<DozorCityApp> createState() => _DozorCityAppState();
@@ -19,7 +15,7 @@ class _DozorCityAppState extends State<DozorCityApp> {
   @override
   void initState() {
     super.initState();
-    _router = AppRouter(scope: widget.scope);
+    _router = AppRouter();
   }
 
   @override
@@ -30,13 +26,10 @@ class _DozorCityAppState extends State<DozorCityApp> {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider<AppScope>.value(
-      value: widget.scope,
-      child: MaterialApp.router(
-        title: 'Dozor City',
-        theme: AppTheme.light(),
-        routerConfig: _router.config,
-      ),
+    return MaterialApp.router(
+      title: 'Dozor City',
+      theme: AppTheme.light(),
+      routerConfig: _router.config,
     );
   }
 }
