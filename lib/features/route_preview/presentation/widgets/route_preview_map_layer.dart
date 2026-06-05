@@ -4,6 +4,7 @@ import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/map/app_map_surface.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
+import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/route_preview/presentation/bloc/route_preview_cubit.dart';
@@ -15,14 +16,16 @@ class RoutePreviewMapLayer extends StatelessWidget {
     required this.vehicles,
     required this.selectedRoutesCount,
     required this.routeColorsById,
+    this.onVehicleTap,
     required this.onCameraIdle,
     this.routePolylines = const [],
   });
 
   final MapController mapController;
-  final List<Vehicle> vehicles;
+  final List<AnimatedVehicle> vehicles;
   final int selectedRoutesCount;
   final Map<String, int> routeColorsById;
+  final ValueChanged<Vehicle>? onVehicleTap;
   final VoidCallback onCameraIdle;
   final List<TransportRoute> routePolylines;
 
@@ -35,14 +38,16 @@ class RoutePreviewMapLayer extends StatelessWidget {
             return BlocBuilder<RoutePreviewCubit, RoutePreviewState>(
               builder: (context, previewState) {
                 final selectedRoutes = mapRoutesState.selectedRoutes;
-                final routesToDraw =
-                    routePolylines.isEmpty ? selectedRoutes : routePolylines;
+                final routesToDraw = routePolylines.isEmpty
+                    ? selectedRoutes
+                    : routePolylines;
 
                 return AppMapSurface(
                   mapController: mapController,
                   vehicles: vehicles,
                   selectedRoutesCount: selectedRoutesCount,
                   routeColorsById: routeColorsById,
+                  onVehicleTap: onVehicleTap,
                   routePolylines: routesToDraw,
                   previewGeometry:
                       previewState.route?.previewGeometry ?? const [],

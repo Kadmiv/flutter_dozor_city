@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
@@ -6,17 +8,19 @@ import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/flutter_map_controller_adapter.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
+import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_marker_widget.dart';
 import 'package:flutter_map/flutter_map.dart' hide MapController;
 import 'package:latlong2/latlong.dart' as ll;
 
-class FlutterMapSurface extends StatelessWidget {
+class FlutterMapSurface extends StatefulWidget {
   const FlutterMapSurface({
     super.key,
     required this.mapController,
     required this.vehicles,
     required this.selectedRoutesCount,
     required this.routeColorsById,
+    this.onVehicleTap,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
@@ -25,9 +29,10 @@ class FlutterMapSurface extends StatelessWidget {
   });
 
   final MapController mapController;
-  final List<Vehicle> vehicles;
+  final List<AnimatedVehicle> vehicles;
   final int selectedRoutesCount;
   final Map<String, int> routeColorsById;
+  final ValueChanged<Vehicle>? onVehicleTap;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
@@ -35,22 +40,72 @@ class FlutterMapSurface extends StatelessWidget {
   final VoidCallback? onCameraIdle;
 
   @override
+  State<FlutterMapSurface> createState() => _FlutterMapSurfaceState();
+}
+
+class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
+  Timer? _frameTimer;
+  DateTime _frameNow = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFrameTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant FlutterMapSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncFrameTimer();
+  }
+
+  @override
+  void dispose() {
+    _frameTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncFrameTimer() {
+    final needsFrames = widget.vehicles.any((vehicle) => vehicle.isMoving);
+    if (!needsFrames) {
+      _frameTimer?.cancel();
+      _frameTimer = null;
+      _frameNow = DateTime.now();
+      return;
+    }
+    _frameTimer ??= Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _frameNow = DateTime.now();
+      });
+      if (!widget.vehicles.any(
+        (vehicle) => vehicle.isMoving && vehicle.progressAt(_frameNow) < 1,
+      )) {
+        _frameTimer?.cancel();
+        _frameTimer = null;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final adapter = mapController as FlutterMapControllerAdapter;
-    
+    final adapter = widget.mapController as FlutterMapControllerAdapter;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
       child: FlutterMap(
         mapController: adapter.mapController,
         options: MapOptions(
           initialCenter: ll.LatLng(
-            mapController.camera.centerLat,
-            mapController.camera.centerLng,
+            widget.mapController.camera.centerLat,
+            widget.mapController.camera.centerLng,
           ),
-          initialZoom: mapController.camera.zoom,
+          initialZoom: widget.mapController.camera.zoom,
           onMapReady: adapter.onMapReady,
           onPositionChanged: (position, hasGesture) {
-            mapController.setCamera(
+            widget.mapController.setCamera(
               AppMapCamera(
                 centerLat: position.center.latitude,
                 centerLng: position.center.longitude,
@@ -60,7 +115,7 @@ class FlutterMapSurface extends StatelessWidget {
           },
           onMapEvent: (event) {
             if (event is MapEventMoveEnd) {
-              onCameraIdle?.call();
+              widget.onCameraIdle?.call();
             }
           },
         ),
@@ -69,34 +124,35 @@ class FlutterMapSurface extends StatelessWidget {
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'ua.gov.dozor.city',
           ),
-          PolylineLayer(
-            polylines: _buildPolylines(),
-          ),
-          MarkerLayer(
-            markers: _buildMarkers(),
-          ),
+          PolylineLayer(polylines: _buildPolylines()),
+          MarkerLayer(markers: _buildMarkers()),
         ],
       ),
     );
   }
 
   List<Marker> _buildMarkers() {
-    final markers = vehicles
-        .map(
-          (vehicle) => Marker(
-            point: ll.LatLng(vehicle.lat, vehicle.lng),
-            width: 60,
-            height: 72,
-            child: VehicleMarkerWidget(
-              vehicle: vehicle,
-              selectedRoutesCount: selectedRoutesCount,
-              routeColorValue: routeColorsById[vehicle.routeId],
-            ),
+    final markers = widget.vehicles.map((animatedVehicle) {
+      final vehicle = animatedVehicle.vehicleAt(_frameNow);
+      return Marker(
+        point: ll.LatLng(vehicle.lat, vehicle.lng),
+        width: 30,
+        height: 30,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: widget.onVehicleTap == null
+              ? null
+              : () => widget.onVehicleTap!(vehicle),
+          child: VehicleMarkerWidget(
+            vehicle: vehicle,
+            selectedRoutesCount: widget.selectedRoutesCount,
+            routeColorValue: widget.routeColorsById[vehicle.routeId],
           ),
-        )
-        .toList();
+        ),
+      );
+    }).toList();
 
-    final start = previewStart;
+    final start = widget.previewStart;
     if (start != null) {
       markers.add(
         Marker(
@@ -108,7 +164,7 @@ class FlutterMapSurface extends StatelessWidget {
       );
     }
 
-    final end = previewEnd;
+    final end = widget.previewEnd;
     if (end != null) {
       markers.add(
         Marker(
@@ -124,7 +180,7 @@ class FlutterMapSurface extends StatelessWidget {
   }
 
   List<Polyline> _buildPolylines() {
-    final polylines = routePolylines
+    final polylines = widget.routePolylines
         .expand(
           (route) => route.polylineSegments
               .where((segment) => segment.length > 1)
@@ -139,11 +195,11 @@ class FlutterMapSurface extends StatelessWidget {
               ),
         )
         .toList(growable: false);
-    if (previewGeometry.isNotEmpty) {
+    if (widget.previewGeometry.isNotEmpty) {
       return [
         ...polylines,
         Polyline(
-          points: previewGeometry
+          points: widget.previewGeometry
               .map((point) => ll.LatLng(point.lat, point.lng))
               .toList(),
           color: const Color(0xFFFCB813),
@@ -151,9 +207,9 @@ class FlutterMapSurface extends StatelessWidget {
         ),
       ];
     }
-    
-    final start = previewStart;
-    final end = previewEnd;
+
+    final start = widget.previewStart;
+    final end = widget.previewEnd;
     if (start != null && end != null) {
       return [
         ...polylines,

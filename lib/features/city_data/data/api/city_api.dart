@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_dozor_city/core/network/dio_client.dart';
 import 'package:flutter_dozor_city/features/city_data/data/models/arrival_info_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/models/city_dto.dart';
@@ -52,42 +51,60 @@ class CityApi {
     ).arrivalInfo;
   }
 
-  List<Map<String, dynamic>> _extractList(dynamic raw) {
+  List<Map<String, Object?>> _extractList(Object? raw) {
     final normalized = _normalizeRaw(raw);
     if (normalized is List) {
-      return normalized.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+      return _objectList(normalized);
     }
-    if (normalized is Map<String, dynamic> && normalized['data'] is List) {
-      final data = normalized['data'] as List;
-      return data.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+    if (normalized is Map<String, Object?> && normalized['data'] is List) {
+      return _objectList(normalized['data']);
     }
-    throw DioException(
-      requestOptions: RequestOptions(path: '/ua/cities'),
-      message: 'Unexpected response shape',
-    );
+    throw FormatException('Unexpected response shape');
   }
 
-  Map<String, dynamic> _extractMap(dynamic raw) {
+  Map<String, Object?> _extractMap(Object? raw) {
     final normalized = _normalizeRaw(raw);
-    if (normalized is Map<String, dynamic>) {
+    if (normalized is Map<String, Object?>) {
       return normalized;
     }
-    throw DioException(
-      requestOptions: RequestOptions(path: '/data'),
-      message: 'Unexpected response shape',
-    );
+    throw FormatException('Unexpected response shape');
   }
 
-  dynamic _normalizeRaw(dynamic raw) {
+  Object? _normalizeRaw(Object? raw) {
     if (raw is String) {
       return jsonDecode(raw);
     }
-    if (raw is List || raw is Map<String, dynamic>) {
+    if (raw is List || raw is Map) {
       return raw;
     }
-    throw DioException(
-      requestOptions: RequestOptions(path: '/data'),
-      message: 'Unexpected response shape',
-    );
+    throw FormatException('Unexpected response shape');
+  }
+
+  List<Map<String, Object?>> _objectList(Object? raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    final result = <Map<String, Object?>>[];
+    for (final item in raw) {
+      final map = _objectMap(item);
+      if (map != null) {
+        result.add(map);
+      }
+    }
+    return result;
+  }
+
+  Map<String, Object?>? _objectMap(Object? raw) {
+    if (raw is Map<String, Object?>) {
+      return raw;
+    }
+    if (raw is Map) {
+      final result = <String, Object?>{};
+      for (final entry in raw.entries) {
+        result['${entry.key}'] = entry.value;
+      }
+      return result;
+    }
+    return null;
   }
 }

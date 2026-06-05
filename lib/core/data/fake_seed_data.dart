@@ -35,6 +35,14 @@ abstract final class FakeSeedData {
       centerLng: 25.59477,
       zoom: 12.4,
     ),
+    City(
+      id: 'batumi',
+      name: 'Батуми',
+      region: 'Аджария',
+      centerLat: 41.6168,
+      centerLng: 41.6367,
+      zoom: 12.5,
+    ),
   ];
 
   static List<SelectedPoint> suggestions(String query) {

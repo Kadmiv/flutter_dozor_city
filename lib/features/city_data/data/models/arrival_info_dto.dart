@@ -13,28 +13,12 @@ class ArrivalInfoDto {
   final List<int> trolleyMinutes;
   final List<int> tramMinutes;
 
-  factory ArrivalInfoDto.fromJson(Map<String, dynamic> json) {
-    List<int> parseList(dynamic raw) {
-      if (raw is! List) {
-        return const [];
-      }
-      return raw
-          .map(
-            (item) => switch (item) {
-              final num value => value.toInt(),
-              final Map map => (map['t'] as num? ?? 0).toInt(),
-              _ => 0,
-            },
-          )
-          .where((value) => value > 0)
-          .toList(growable: false);
-    }
-
+  factory ArrivalInfoDto.fromJson(Map<String, Object?> json) {
     return ArrivalInfoDto(
-      zoneId: '${json['zoneId'] ?? ''}',
-      busMinutes: parseList(json['busMinutes'] ?? json['a1']),
-      trolleyMinutes: parseList(json['trolleyMinutes'] ?? json['a2']),
-      tramMinutes: parseList(json['tramMinutes'] ?? json['a3']),
+      zoneId: _string(json['zoneId']),
+      busMinutes: _parseList(json['busMinutes'] ?? json['a1']),
+      trolleyMinutes: _parseList(json['trolleyMinutes'] ?? json['a2']),
+      tramMinutes: _parseList(json['tramMinutes'] ?? json['a3']),
     );
   }
 
@@ -49,3 +33,33 @@ class ArrivalInfoDto {
 }
 
 typedef ArrivalInfoModel = ArrivalInfoDto;
+
+List<int> _parseList(Object? raw) {
+  if (raw is! List) {
+    return const [];
+  }
+  final result = <int>[];
+  for (final item in raw) {
+    final value = _parseMinute(item);
+    if (value > 0) {
+      result.add(value);
+    }
+  }
+  return result;
+}
+
+int _parseMinute(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  if (raw is Map) {
+    final value = raw['t'];
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse('$value') ?? 0;
+  }
+  return int.tryParse('$raw') ?? 0;
+}
+
+String _string(Object? raw) => raw == null ? '' : '$raw';

@@ -17,29 +17,22 @@ class CityDto {
   final double centerLng;
   final double zoom;
 
-  factory CityDto.fromJson(Map<String, dynamic> json) {
-    final latLng = json['latLng'] is Map
-        ? (json['latLng'] as Map).cast<String, dynamic>()
-        : null;
-    final name = (json['name'] as String?) ??
-        (json['name0'] as String?) ??
-        (json['name1'] as String?) ??
-        '';
-    final centerLat = (json['centerLat'] as num?) ??
-        (json['lat'] as num?) ??
-        (latLng?['lat'] as num?) ??
-        0;
-    final centerLng = (json['centerLng'] as num?) ??
-        (json['lng'] as num?) ??
-        (latLng?['lng'] as num?) ??
-        0;
+  factory CityDto.fromJson(Map<String, Object?> json) {
+    final latLng = _objectMap(json['latLng']);
+    final name = _string(json['name']).isNotEmpty
+        ? _string(json['name'])
+        : _string(json['name0']).isNotEmpty
+            ? _string(json['name0'])
+            : _string(json['name1']);
+    final centerLat = _double(json['centerLat'] ?? json['lat'] ?? latLng?['lat']);
+    final centerLng = _double(json['centerLng'] ?? json['lng'] ?? latLng?['lng']);
     return CityDto(
-      id: (json['id'] as String?) ?? (json['cityId'] as String?) ?? '',
+      id: _string(json['id']).isNotEmpty ? _string(json['id']) : _string(json['cityId']),
       name: name,
-      region: json['region'] as String? ?? '',
-      centerLat: centerLat.toDouble(),
-      centerLng: centerLng.toDouble(),
-      zoom: (json['zoom'] as num? ?? 12).toDouble(),
+      region: _string(json['region']),
+      centerLat: centerLat,
+      centerLng: centerLng,
+      zoom: _double(json['zoom'] ?? 12),
     );
   }
 
@@ -56,3 +49,26 @@ class CityDto {
 }
 
 typedef CityModel = CityDto;
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}
+
+String _string(Object? raw) => raw == null ? '' : '$raw';
+
+double _double(Object? raw) {
+  if (raw is num) {
+    return raw.toDouble();
+  }
+  return double.tryParse('$raw') ?? 0;
+}

@@ -26,26 +26,24 @@ class RouteDto {
   final String outLineColor;
   final double price;
 
-  factory RouteDto.fromJson(Map<String, dynamic> json) {
-    final rawNames = (json['nm'] as List?) ?? (json['name'] as List?) ?? const [];
-    final rawLines = (json['lns'] as List?) ?? (json['lines'] as List?) ?? const [];
-    final rawZones = (json['zns'] as List?) ?? (json['zones'] as List?) ?? const [];
+  factory RouteDto.fromJson(Map<String, Object?> json) {
+    final rawNames = _stringList(json['nm']) ?? _stringList(json['name']) ?? const [];
+    final rawLines = _objectList(json['lns']) ?? _objectList(json['lines']) ?? const [];
+    final rawZones = _objectList(json['zns']) ?? _objectList(json['zones']) ?? const [];
     return RouteDto(
-      id: (json['id'] as num).toInt(),
-      names: rawNames.whereType<String>().toList(growable: false),
-      shortName: json['sNm'] as String? ?? json['shortName'] as String? ?? '',
-      info: json['inf'] as String? ?? json['info'] as String? ?? '',
-      transportType: (json['transportType'] as num?)?.toInt(),
+      id: _int(json['id']),
+      names: rawNames,
+      shortName: _string(json['sNm']).isNotEmpty ? _string(json['sNm']) : _string(json['shortName']),
+      info: _string(json['inf']).isNotEmpty ? _string(json['inf']) : _string(json['info']),
+      transportType: json['transportType'] == null ? null : _int(json['transportType']),
       lines: rawLines
-          .whereType<Map>()
-          .map((item) => RouteLineDto.fromJson(item.cast<String, dynamic>()))
+          .map((item) => RouteLineDto.fromJson(item))
           .toList(growable: false),
       zones: rawZones
-          .whereType<Map>()
-          .map((item) => RouteZoneShapeDto.fromJson(item.cast<String, dynamic>()))
+          .map((item) => RouteZoneShapeDto.fromJson(item))
           .toList(growable: false),
-      outLineColor: json['oLC'] as String? ?? json['outLineColor'] as String? ?? '',
-      price: (json['prc'] as num? ?? json['price'] as num? ?? 0).toDouble(),
+      outLineColor: _string(json['oLC']).isNotEmpty ? _string(json['oLC']) : _string(json['outLineColor']),
+      price: _double(json['prc'] ?? json['price']),
     );
   }
 
@@ -76,3 +74,54 @@ class RouteDto {
 }
 
 typedef JsonRouteModel = RouteDto;
+
+List<String>? _stringList(Object? raw) {
+  if (raw is List) {
+    return raw.map((item) => '$item').where((item) => item.isNotEmpty).toList(growable: false);
+  }
+  return null;
+}
+
+List<Map<String, Object?>>? _objectList(Object? raw) {
+  if (raw is List) {
+    final result = <Map<String, Object?>>[];
+    for (final item in raw) {
+      final map = _objectMap(item);
+      if (map != null) {
+        result.add(map);
+      }
+    }
+    return result;
+  }
+  return null;
+}
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}
+
+String _string(Object? raw) => raw == null ? '' : '$raw';
+
+int _int(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  return int.tryParse('$raw') ?? 0;
+}
+
+double _double(Object? raw) {
+  if (raw is num) {
+    return raw.toDouble();
+  }
+  return double.tryParse('$raw') ?? 0;
+}

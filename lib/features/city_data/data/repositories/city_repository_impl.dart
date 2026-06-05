@@ -1,5 +1,6 @@
 import 'package:flutter_dozor_city/features/city_data/data/datasources/local/city_local_data_source.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_city_catalog.dart';
 import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/city_remote_data_source.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
@@ -58,16 +59,20 @@ class CityRepositoryImpl implements CityRepository, CitiesRepository, CityDataFr
   Future<List<City>> getCities() async {
     final cached = await _localDataSource.getCities();
     final cachedUpdatedAt = await _localDataSource.getCitiesUpdatedAt();
-    if (cached.isNotEmpty && _isFresh(cachedUpdatedAt, _citiesCacheTtl)) {
-      return cached;
+    final cachedWithBatumi = cached.isEmpty ? cached : _ensureBatumiCity(cached);
+    if (cachedWithBatumi.isNotEmpty && _isFresh(cachedUpdatedAt, _citiesCacheTtl)) {
+      if (cachedWithBatumi.length != cached.length) {
+        await _localDataSource.saveCities(cachedWithBatumi);
+      }
+      return cachedWithBatumi;
     }
     try {
-      final cities = await _remoteDataSource.getCities();
+      final cities = _ensureBatumiCity(await _remoteDataSource.getCities());
       await _localDataSource.saveCities(cities);
       return cities;
     } on DioException {
-      if (cached.isNotEmpty) {
-        return cached;
+      if (cachedWithBatumi.isNotEmpty) {
+        return cachedWithBatumi;
       }
       throw const NetworkFailure();
     }
@@ -180,5 +185,14 @@ class CityRepositoryImpl implements CityRepository, CitiesRepository, CityDataFr
       return false;
     }
     return _clock.now().difference(updatedAt) <= ttl;
+  }
+
+  List<City> _ensureBatumiCity(List<City> cities) {
+    final result = List<City>.from(cities);
+    final hasBatumi = result.any((city) => city.id == BatumiCityCatalog.cityId);
+    if (!hasBatumi) {
+      result.add(BatumiCityCatalog.city);
+    }
+    return result;
   }
 }

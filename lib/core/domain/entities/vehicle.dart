@@ -25,17 +25,43 @@ class Vehicle extends Equatable {
   final int speed;
   final String govNumber;
 
+  Vehicle copyWith({
+    String? id,
+    String? routeId,
+    String? routeShortName,
+    String? routeTitle,
+    int? transportType,
+    double? lat,
+    double? lng,
+    int? azimuth,
+    int? speed,
+    String? govNumber,
+  }) {
+    return Vehicle(
+      id: id ?? this.id,
+      routeId: routeId ?? this.routeId,
+      routeShortName: routeShortName ?? this.routeShortName,
+      routeTitle: routeTitle ?? this.routeTitle,
+      transportType: transportType ?? this.transportType,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      azimuth: azimuth ?? this.azimuth,
+      speed: speed ?? this.speed,
+      govNumber: govNumber ?? this.govNumber,
+    );
+  }
+
   @override
   List<Object> get props => [
-        id,
-        routeId,
-        routeShortName,
-        routeTitle,
-        transportType,
-        lat,
-        lng,
-        azimuth,
-        speed,
-        govNumber,
-      ];
+    id,
+    routeId,
+    routeShortName,
+    routeTitle,
+    transportType,
+    lat,
+    lng,
+    azimuth,
+    speed,
+    govNumber,
+  ];
 }

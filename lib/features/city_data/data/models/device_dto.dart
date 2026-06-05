@@ -15,18 +15,40 @@ class VehicleDto {
   final int speed;
   final String govNumber;
 
-  factory VehicleDto.fromJson(Map<String, dynamic> json) {
+  factory VehicleDto.fromJson(Map<String, Object?> json) {
     return VehicleDto(
-      id: (json['id'] as num).toInt(),
+      id: _int(json['id']),
       location: AppLatLngDto.fromJson(
-        (json['loc'] as Map?)?.cast<String, dynamic>() ??
-            (json['location'] as Map).cast<String, dynamic>(),
+        _objectMap(json['loc']) ?? _objectMap(json['location']) ?? const {},
       ),
-      azimuth: (json['azi'] as num? ?? json['azimuth'] as num? ?? 0).toInt(),
-      speed: (json['spd'] as num? ?? json['speed'] as num? ?? 0).toInt(),
-      govNumber: json['gNb'] as String? ?? json['govNumber'] as String? ?? '',
+      azimuth: _int(json['azi'] ?? json['azimuth']),
+      speed: _int(json['spd'] ?? json['speed']),
+      govNumber: _string(json['gNb'] ?? json['govNumber']),
     );
   }
 }
 
 typedef JsonDeviceModel = VehicleDto;
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}
+
+int _int(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  return int.tryParse('$raw') ?? 0;
+}
+
+String _string(Object? raw) => raw == null ? '' : '$raw';

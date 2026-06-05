@@ -7,15 +7,42 @@ class RouteLineDto {
 
   final List<AppLatLngDto> points;
 
-  factory RouteLineDto.fromJson(Map<String, dynamic> json) {
-    final rawPoints = (json['pts'] as List?) ?? (json['points'] as List?) ?? const [];
+  factory RouteLineDto.fromJson(Map<String, Object?> json) {
+    final rawPoints = _objectList(json['pts']) ?? _objectList(json['points']) ?? const [];
     return RouteLineDto(
       points: rawPoints
-          .whereType<Map>()
-          .map((item) => AppLatLngDto.fromJson(item.cast<String, dynamic>()))
+          .map((item) => AppLatLngDto.fromJson(item))
           .toList(growable: false),
     );
   }
 }
 
 typedef JsonRouteLineModel = RouteLineDto;
+
+List<Map<String, Object?>>? _objectList(Object? raw) {
+  if (raw is List) {
+    final result = <Map<String, Object?>>[];
+    for (final item in raw) {
+      final map = _objectMap(item);
+      if (map != null) {
+        result.add(map);
+      }
+    }
+    return result;
+  }
+  return null;
+}
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}

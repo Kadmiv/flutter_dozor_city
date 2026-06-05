@@ -14,17 +14,13 @@ class RouteZoneShapeDto {
   final AppLatLngDto? center;
   final AppLatLngDto? point;
 
-  factory RouteZoneShapeDto.fromJson(Map<String, dynamic> json) {
-    final rawNames = (json['nm'] as List?) ?? (json['name'] as List?) ?? const [];
+  factory RouteZoneShapeDto.fromJson(Map<String, Object?> json) {
+    final rawNames = _stringList(json['nm']) ?? _stringList(json['name']) ?? const [];
     return RouteZoneShapeDto(
-      id: (json['id'] as num).toInt(),
-      names: rawNames.whereType<String>().toList(growable: false),
-      center: json['ctr'] is Map<String, dynamic>
-          ? AppLatLngDto.fromJson(json['ctr'] as Map<String, dynamic>)
-          : null,
-      point: json['pt'] is Map<String, dynamic>
-          ? AppLatLngDto.fromJson(json['pt'] as Map<String, dynamic>)
-          : null,
+      id: _int(json['id']),
+      names: rawNames,
+      center: _objectMap(json['ctr']) == null ? null : AppLatLngDto.fromJson(_objectMap(json['ctr'])!),
+      point: _objectMap(json['pt']) == null ? null : AppLatLngDto.fromJson(_objectMap(json['pt'])!),
     );
   }
 
@@ -38,3 +34,31 @@ class RouteZoneShapeDto {
 }
 
 typedef JsonRouteZoneModel = RouteZoneShapeDto;
+
+List<String>? _stringList(Object? raw) {
+  if (raw is List) {
+    return raw.map((item) => '$item').where((item) => item.isNotEmpty).toList(growable: false);
+  }
+  return null;
+}
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}
+
+int _int(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  return int.tryParse('$raw') ?? 0;
+}

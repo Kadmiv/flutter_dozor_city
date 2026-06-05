@@ -9,16 +9,53 @@ class RouteDevicesDto {
   final int routeId;
   final List<VehicleDto> devices;
 
-  factory RouteDevicesDto.fromJson(Map<String, dynamic> json) {
-    final rawDevices = (json['dvs'] as List?) ?? (json['devices'] as List?) ?? (json['data'] as List?) ?? const [];
+  factory RouteDevicesDto.fromJson(Map<String, Object?> json) {
+    final rawDevices = _objectList(json['dvs']) ??
+        _objectList(json['devices']) ??
+        _objectList(json['data']) ??
+        const [];
     return RouteDevicesDto(
-      routeId: (json['rId'] as num? ?? json['routeId'] as num? ?? json['id'] as num? ?? 0).toInt(),
+      routeId: _int(json['rId'] ?? json['routeId'] ?? json['id']),
       devices: rawDevices
-          .whereType<Map>()
-          .map((item) => VehicleDto.fromJson(item.cast<String, dynamic>()))
+          .map((item) => VehicleDto.fromJson(item))
           .toList(growable: false),
     );
   }
 }
 
 typedef JsonRouteDevicesModel = RouteDevicesDto;
+
+List<Map<String, Object?>>? _objectList(Object? raw) {
+  if (raw is List) {
+    final result = <Map<String, Object?>>[];
+    for (final item in raw) {
+      final map = _objectMap(item);
+      if (map != null) {
+        result.add(map);
+      }
+    }
+    return result;
+  }
+  return null;
+}
+
+Map<String, Object?>? _objectMap(Object? raw) {
+  if (raw is Map<String, Object?>) {
+    return raw;
+  }
+  if (raw is Map) {
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      result['${entry.key}'] = entry.value;
+    }
+    return result;
+  }
+  return null;
+}
+
+int _int(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  return int.tryParse('$raw') ?? 0;
+}

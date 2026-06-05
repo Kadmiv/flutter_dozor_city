@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/features/city_selection/presentation/bloc/city_selection_cubit.dart';
 import 'package:flutter_dozor_city/features/city_selection/presentation/widgets/city_picker_content.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
+import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_details_sheet.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
@@ -247,6 +249,36 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
     await widget.liveTrackingCubit.updateFilters(_selectedRouteIdsOrNull());
   }
 
+  Future<void> _openVehicleSheet(Vehicle vehicle) async {
+    final routeColorValue = _routeColorValueFor(vehicle.routeId);
+    if (!mounted) {
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => VehicleDetailsSheet(
+        vehicle: vehicle,
+        routeColorValue: routeColorValue,
+      ),
+    );
+  }
+
+  int _routeColorValueFor(String routeId) {
+    for (final route in widget.mapRoutesCubit.state.selectedRoutes) {
+      if (route.id == routeId) {
+        return route.lineColorValue;
+      }
+    }
+    for (final route in widget.mapRoutesCubit.state.availableRoutes) {
+      if (route.id == routeId) {
+        return route.lineColorValue;
+      }
+    }
+    return 0xFFC8102E;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -264,6 +296,7 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
         onOpenRoutesSheet: _openRoutesSheet,
         onOpenStopsSheet: _openStopsSheet,
         onRemoveSelectedRoute: _removeSelectedRoute,
+        onOpenVehicleSheet: _openVehicleSheet,
         child: widget.child,
       ),
     );

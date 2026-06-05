@@ -43,8 +43,11 @@ class DioClient {
           'Cookie': 'gts.web.city=${request.cityCookieId}',
       },
     );
+    final path = request.baseUrl == null
+        ? request.path
+        : Uri.parse(request.baseUrl!).resolve(request.path).toString();
     return dio.request<dynamic>(
-      request.path,
+      path,
       data: request.data,
       queryParameters: request.queryParameters,
       options: options,

@@ -9,11 +9,13 @@ class VehicleMarkerLayer extends StatefulWidget {
     required this.mapController,
     required this.vehicles,
     required this.selectedRoutesCount,
+    this.onVehicleTap,
   });
 
   final MapController mapController;
   final List<Vehicle> vehicles;
   final int selectedRoutesCount;
+  final ValueChanged<Vehicle>? onVehicleTap;
 
   @override
   State<VehicleMarkerLayer> createState() => _VehicleMarkerLayerState();
@@ -45,12 +47,18 @@ class _VehicleMarkerLayerState extends State<VehicleMarkerLayer> {
                   curve: Curves.linear,
                   left: item.left,
                   top: item.top,
-                  child: Tooltip(
-                    message:
-                        '${item.vehicle.govNumber} • ${item.vehicle.speed} км/год',
-                    child: VehicleMarkerWidget(
-                      vehicle: item.vehicle,
-                      selectedRoutesCount: widget.selectedRoutesCount,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: widget.onVehicleTap == null
+                        ? null
+                        : () => widget.onVehicleTap!(item.vehicle),
+                    child: Tooltip(
+                      message:
+                          '${item.vehicle.govNumber} • ${item.vehicle.speed} км/год',
+                      child: VehicleMarkerWidget(
+                        vehicle: item.vehicle,
+                        selectedRoutesCount: widget.selectedRoutesCount,
+                      ),
                     ),
                   ),
                 ),

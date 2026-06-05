@@ -11,11 +11,11 @@ class RouteZoneDto {
   final String routeId;
   final String name;
 
-  factory RouteZoneDto.fromJson(Map<String, dynamic> json) {
+  factory RouteZoneDto.fromJson(Map<String, Object?> json) {
     return RouteZoneDto(
-      id: '${json['id']}',
-      routeId: '${json['routeId'] ?? ''}',
-      name: json['name'] as String? ?? json['nm'] as String? ?? '',
+      id: _string(json['id']),
+      routeId: _string(json['routeId']),
+      name: _string(json['name']).isNotEmpty ? _string(json['name']) : _string(json['nm']),
     );
   }
 
@@ -29,3 +29,5 @@ class RouteZoneDto {
 }
 
 typedef RouteZoneModel = RouteZoneDto;
+
+String _string(Object? raw) => raw == null ? '' : '$raw';

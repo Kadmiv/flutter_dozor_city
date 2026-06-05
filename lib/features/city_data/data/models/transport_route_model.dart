@@ -13,12 +13,14 @@ class TransportRouteModel {
   final String title;
   final int transportType;
 
-  factory TransportRouteModel.fromJson(Map<String, dynamic> json) {
+  factory TransportRouteModel.fromJson(Map<String, Object?> json) {
     return TransportRouteModel(
-      id: '${json['id']}',
-      shortName: json['shortName'] as String? ?? json['sNm'] as String? ?? '',
-      title: json['title'] as String? ?? json['name'] as String? ?? '',
-      transportType: (json['transportType'] as num? ?? 0).toInt(),
+      id: _string(json['id']),
+      shortName: _string(json['shortName']).isNotEmpty
+          ? _string(json['shortName'])
+          : _string(json['sNm']),
+      title: _string(json['title']).isNotEmpty ? _string(json['title']) : _string(json['name']),
+      transportType: _int(json['transportType']),
     );
   }
 
@@ -30,4 +32,13 @@ class TransportRouteModel {
       transportType: transportType,
     );
   }
+}
+
+String _string(Object? raw) => raw == null ? '' : '$raw';
+
+int _int(Object? raw) {
+  if (raw is num) {
+    return raw.toInt();
+  }
+  return int.tryParse('$raw') ?? 0;
 }

@@ -5,6 +5,7 @@ import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/router/app_route_names.dart';
+import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
@@ -27,6 +28,7 @@ class MainMapPage extends StatelessWidget {
     required this.onOpenRoutesSheet,
     required this.onOpenStopsSheet,
     required this.onRemoveSelectedRoute,
+    required this.onOpenVehicleSheet,
     required this.child,
   });
 
@@ -35,6 +37,7 @@ class MainMapPage extends StatelessWidget {
   final ValueChanged<int> onOpenRoutesSheet;
   final ValueChanged<TransportRoute> onOpenStopsSheet;
   final Future<void> Function(TransportRoute route) onRemoveSelectedRoute;
+  final ValueChanged<Vehicle> onOpenVehicleSheet;
   final Widget child;
 
   @override
@@ -50,6 +53,7 @@ class MainMapPage extends StatelessWidget {
             onOpenRoutesSheet: onOpenRoutesSheet,
             onOpenStopsSheet: onOpenStopsSheet,
             onRemoveSelectedRoute: onRemoveSelectedRoute,
+            onOpenVehicleSheet: onOpenVehicleSheet,
             child: child,
           ),
         ),
@@ -65,6 +69,7 @@ class _MapShell extends StatelessWidget {
     required this.onOpenRoutesSheet,
     required this.onOpenStopsSheet,
     required this.onRemoveSelectedRoute,
+    required this.onOpenVehicleSheet,
     required this.child,
   });
 
@@ -73,6 +78,7 @@ class _MapShell extends StatelessWidget {
   final ValueChanged<int> onOpenRoutesSheet;
   final ValueChanged<TransportRoute> onOpenStopsSheet;
   final Future<void> Function(TransportRoute route) onRemoveSelectedRoute;
+  final ValueChanged<Vehicle> onOpenVehicleSheet;
   final Widget child;
 
   @override
@@ -99,31 +105,33 @@ class _MapShell extends StatelessWidget {
                           };
                           final hasTypeScopedRoutes =
                               routesState.availableRoutes.isNotEmpty;
-                          final List<Vehicle> visibleVehicles =
+                          final List<AnimatedVehicle> visibleVehicles =
                               !mainMapState.showMarkers
-                              ? const <Vehicle>[]
+                              ? const <AnimatedVehicle>[]
                               : selectedRoutes.isEmpty
                               ? hasTypeScopedRoutes
-                                    ? trackingState.vehicles
+                                    ? trackingState.animatedVehicles
                                           .where(
                                             (vehicle) =>
-                                                vehicle.transportType ==
+                                                vehicle.vehicle.transportType ==
                                                 routesState.transportType,
                                           )
                                           .toList(growable: false)
-                                    : trackingState.vehicles
-                              : trackingState.vehicles
+                                    : trackingState.animatedVehicles
+                              : trackingState.animatedVehicles
                                     .where(
                                       (vehicle) => selectedRoutes.contains(
-                                        vehicle.routeId,
+                                        vehicle.vehicle.routeId,
                                       ),
                                     )
                                     .toList(growable: false);
                           return RoutePreviewMapLayer(
                             mapController: mapController,
                             vehicles: visibleVehicles,
-                            selectedRoutesCount: routesState.selectedRoutes.length,
+                            selectedRoutesCount:
+                                routesState.selectedRoutes.length,
                             routeColorsById: routeColorsById,
+                            onVehicleTap: onOpenVehicleSheet,
                             onCameraIdle: () {
                               final camera = mapController.camera;
                               context.read<MainMapCubit>().saveCamera(
@@ -165,16 +173,16 @@ class _MapShell extends StatelessWidget {
                       context.read<MainMapCubit>().dismissHint('select-city'),
                 ),
               ),
-              if (state.mode == MainMapMode.routes)
-                Positioned(
-                  top: 74,
-                  left: 12,
-                  right: 96,
-                  child: _SelectedRoutesWrap(
-                    onRouteTap: onOpenStopsSheet,
-                    onRouteRemove: onRemoveSelectedRoute,
-                  ),
+            if (state.mode == MainMapMode.routes)
+              Positioned(
+                top: 74,
+                left: 12,
+                right: 96,
+                child: _SelectedRoutesWrap(
+                  onRouteTap: onOpenStopsSheet,
+                  onRouteRemove: onRemoveSelectedRoute,
                 ),
+              ),
             // const Positioned(top: 74, right: 12, child: _MarkersMenu()),
             if (!state.dismissedHints.contains('map-menu') &&
                 state.mode == MainMapMode.routes)

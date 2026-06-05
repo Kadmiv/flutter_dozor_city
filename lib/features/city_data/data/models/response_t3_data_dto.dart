@@ -7,10 +7,10 @@ class ResponseT3DataModel {
 
   factory ResponseT3DataModel.fromJson({
     required String zoneId,
-    required Map<String, dynamic> json,
+    required Map<String, Object?> json,
   }) {
     return ResponseT3DataModel(
-      arrivalInfo: ArrivalInfoModel.fromJson(<String, dynamic>{
+      arrivalInfo: ArrivalInfoModel.fromJson(<String, Object?>{
         ...json,
         'zoneId': zoneId,
       }),

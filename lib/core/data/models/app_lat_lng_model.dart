@@ -9,10 +9,10 @@ class AppLatLngDto {
   final double lat;
   final double lng;
 
-  factory AppLatLngDto.fromJson(Map<String, dynamic> json) {
+  factory AppLatLngDto.fromJson(Map<String, Object?> json) {
     return AppLatLngDto(
-      lat: (json['lat'] as num).toDouble(),
-      lng: (json['lng'] as num).toDouble(),
+      lat: _double(json['lat']),
+      lng: _double(json['lng']),
     );
   }
 
@@ -22,3 +22,10 @@ class AppLatLngDto {
 }
 
 typedef AppLatLngModel = AppLatLngDto;
+
+double _double(Object? raw) {
+  if (raw is num) {
+    return raw.toDouble();
+  }
+  return double.tryParse('$raw') ?? 0;
+}

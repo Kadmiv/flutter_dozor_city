@@ -7,6 +7,8 @@ import 'package:flutter_dozor_city/core/time/app_clock.dart';
 import 'package:flutter_dozor_city/core/network/dio_client.dart';
 import 'package:flutter_dozor_city/core/storage/hive_boxes.dart';
 import 'package:flutter_dozor_city/features/city_data/data/datasources/local/hive_city_local_data_source.dart';
+import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/batumi_remote_data_source.dart';
+import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/composite_city_remote_data_source.dart';
 import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/dio_city_remote_data_source.dart';
 import 'package:flutter_dozor_city/features/city_data/data/repositories/city_repository_impl.dart';
 import 'package:flutter_dozor_city/features/city_data/data/repositories/in_memory_city_repository.dart';
@@ -29,7 +31,10 @@ abstract final class DataModule {
 
     injector.registerSingleton<CityRepository>(
       CityRepositoryImpl(
-        remoteDataSource: DioCityRemoteDataSource(injector<DioClient>()),
+        remoteDataSource: CompositeCityRemoteDataSource(
+          dozorRemoteDataSource: DioCityRemoteDataSource(injector<DioClient>()),
+          batumiRemoteDataSource: BatumiRemoteDataSource(injector<DioClient>()),
+        ),
         localDataSource: cityLocalDataSource,
         sessionRepository: injector<SessionRepository>(),
         clock: injector<AppClock>(),
