@@ -24,10 +24,6 @@ void main() {
       final hueDiff = (hsl3.hue - hsl8.hue).abs();
       final wrappedHueDiff = hueDiff > 180 ? 360 - hueDiff : hueDiff;
 
-      print('TO3 Color: $c3, Hue: ${hsl3.hue}');
-      print('TO8 Color: $c8, Hue: ${hsl8.hue}');
-      print('Hue Difference: $wrappedHueDiff');
-
       expect(wrappedHueDiff, greaterThan(20.0), reason: 'Hues should be distinct for TO3 and TO8');
     });
 

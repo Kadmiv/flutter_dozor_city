@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
-import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/check_city_data_freshness_use_case.dart';
+import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_session_use_cases.dart';
 
 enum MainMapTab { search, results, stored }
 enum MainMapMode { city, routes }
@@ -54,31 +54,49 @@ class MainMapState {
 
 class MainMapCubit extends Cubit<MainMapState> {
   MainMapCubit({
-    required SessionRepository sessionRepository,
+    required GetSelectedCityUseCase getSelectedCityUseCase,
+    required GetMapCameraUseCase getMapCameraUseCase,
+    required SaveMapCameraUseCase saveMapCameraUseCase,
+    required GetUiFlagUseCase getUiFlagUseCase,
+    required SetUiFlagUseCase setUiFlagUseCase,
     required CheckMainMapCityDataFreshnessUseCase checkCityDataFreshnessUseCase,
   })
-      : _sessionRepository = sessionRepository,
+      : _getSelectedCityUseCase = getSelectedCityUseCase,
+        _getMapCameraUseCase = getMapCameraUseCase,
+        _saveMapCameraUseCase = saveMapCameraUseCase,
+        _getUiFlagUseCase = getUiFlagUseCase,
+        _setUiFlagUseCase = setUiFlagUseCase,
         _checkCityDataFreshnessUseCase = checkCityDataFreshnessUseCase,
-        super(MainMapState(city: sessionRepository.selectedCity));
+        super(MainMapState(city: getSelectedCityUseCase()));
 
-  final SessionRepository _sessionRepository;
+  final GetSelectedCityUseCase _getSelectedCityUseCase;
+  final GetMapCameraUseCase _getMapCameraUseCase;
+  final SaveMapCameraUseCase _saveMapCameraUseCase;
+  final GetUiFlagUseCase _getUiFlagUseCase;
+  final SetUiFlagUseCase _setUiFlagUseCase;
   final CheckMainMapCityDataFreshnessUseCase _checkCityDataFreshnessUseCase;
 
-  Future<void> refresh() async {
-    final city = _sessionRepository.selectedCity;
+  Future<void> refresh({bool forceCityCenter = false}) async {
+    final city = _getSelectedCityUseCase();
     AppMapCamera? camera;
     final dismissedHints = <String>{};
     if (city != null) {
       await _checkCityDataFreshnessUseCase(city.id);
-      camera = await _sessionRepository.getMapCamera(city.id) ??
-          AppMapCamera(
-            centerLat: city.centerLat,
-            centerLng: city.centerLng,
-            zoom: city.zoom,
-          );
+      camera = forceCityCenter
+          ? AppMapCamera(
+              centerLat: city.centerLat,
+              centerLng: city.centerLng,
+              zoom: city.zoom,
+            )
+          : await _getMapCameraUseCase(city.id) ??
+              AppMapCamera(
+                centerLat: city.centerLat,
+                centerLng: city.centerLng,
+                zoom: city.zoom,
+              );
     }
     for (final key in const ['select-city', 'map-menu', 'arrival']) {
-      if (await _sessionRepository.getUiFlag(key)) {
+      if (await _getUiFlagUseCase(key)) {
         dismissedHints.add(key);
       }
     }
@@ -145,7 +163,7 @@ class MainMapCubit extends Cubit<MainMapState> {
 
   Future<void> dismissHint(String key) async {
     final updated = Set<String>.from(state.dismissedHints)..add(key);
-    await _sessionRepository.setUiFlag(key, true);
+    await _setUiFlagUseCase(key, true);
     emit(state.copyWith(dismissedHints: updated));
   }
 
@@ -154,7 +172,7 @@ class MainMapCubit extends Cubit<MainMapState> {
     if (cityId == null) {
       return;
     }
-    await _sessionRepository.setMapCamera(cityId, camera);
+    await _saveMapCameraUseCase(cityId, camera);
     emit(state.copyWith(camera: camera));
   }
 }

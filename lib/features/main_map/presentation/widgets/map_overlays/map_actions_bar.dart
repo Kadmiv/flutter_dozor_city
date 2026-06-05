@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dozor_city/core/domain/entities/search_params.dart';
 import 'package:flutter_dozor_city/core/router/app_route_names.dart';
+import 'package:flutter_dozor_city/core/router/route_args.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,7 +27,7 @@ class MapActionsBar extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () {
                 final extra = context.mounted
-                    ? GoRouterState.of(context).extra as SearchParams?
+                    ? GoRouterState.of(context).extra as RouteResultsArgs?
                     : null;
                 if (extra != null) {
                   context.goNamed(AppRouteNames.results, extra: extra);

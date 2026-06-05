@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dozor_city/core/router/app_router.dart';
+import 'package:flutter_dozor_city/router/app_router.dart';
 import 'package:flutter_dozor_city/core/theme/app_theme.dart';
 
 class DozorCityApp extends StatefulWidget {

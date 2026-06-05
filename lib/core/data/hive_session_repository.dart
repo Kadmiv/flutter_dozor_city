@@ -1,9 +1,14 @@
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:hive/hive.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/city_session_repository.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/map_camera_repository.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/route_cache_metadata_repository.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/ui_flags_repository.dart';
 
-class HiveSessionRepository extends SessionRepository {
+class HiveSessionRepository extends SessionRepository implements CitySessionRepository, RouteCacheMetadataRepository, MapCameraRepository, UiFlagsRepository {
   HiveSessionRepository({required Box<dynamic> box})
       : _box = box,
         _selectedCity = _readCity(box.get(_selectedCityKey));
@@ -23,6 +28,24 @@ class HiveSessionRepository extends SessionRepository {
       return raw.toInt();
     }
     return null;
+  }
+
+  @override
+  Future<SelectedMapRoutes?> getSelectedMapRoutes(String cityId) async {
+    final rawTransportType = _box.get(_selectedTransportTypeKey(cityId));
+    if (rawTransportType is! num) {
+      return null;
+    }
+    final transportType = rawTransportType.toInt();
+    final rawRouteIds = _box.get(_selectedRouteIdsKey(cityId, transportType));
+    final rawActiveRouteId = _box.get(_activeRouteIdKey(cityId, transportType));
+    return SelectedMapRoutes(
+      transportType: transportType,
+      selectedRouteIds: rawRouteIds is List
+          ? rawRouteIds.whereType<String>().toList(growable: false)
+          : const [],
+      activeRouteId: rawActiveRouteId is String ? rawActiveRouteId : null,
+    );
   }
 
   @override
@@ -70,6 +93,25 @@ class HiveSessionRepository extends SessionRepository {
   }
 
   @override
+  Future<void> setSelectedMapRoutes(
+    String cityId,
+    SelectedMapRoutes selectedMapRoutes,
+  ) async {
+    await _box.put(
+      _selectedTransportTypeKey(cityId),
+      selectedMapRoutes.transportType,
+    );
+    await _box.put(
+      _selectedRouteIdsKey(cityId, selectedMapRoutes.transportType),
+      selectedMapRoutes.selectedRouteIds,
+    );
+    await _box.put(
+      _activeRouteIdKey(cityId, selectedMapRoutes.transportType),
+      selectedMapRoutes.activeRouteId,
+    );
+  }
+
+  @override
   Future<void> setMapCamera(String cityId, AppMapCamera camera) async {
     await _box.put(_mapCameraKey(cityId), <String, dynamic>{
       'centerLat': camera.centerLat,
@@ -98,6 +140,12 @@ class HiveSessionRepository extends SessionRepository {
   }
 
   static String _routesCacheHashKey(String cityId) => 'routes_cache_hash_v2:$cityId';
+  static String _selectedTransportTypeKey(String cityId) =>
+      'selected_transport_type:$cityId';
+  static String _selectedRouteIdsKey(String cityId, int transportType) =>
+      'selected_route_ids:$cityId:$transportType';
+  static String _activeRouteIdKey(String cityId, int transportType) =>
+      'active_route_id:$cityId:$transportType';
   static String _mapCameraKey(String cityId) => 'map_camera:$cityId';
   static String _uiFlagKey(String key) => 'ui_flag:$key';
 }

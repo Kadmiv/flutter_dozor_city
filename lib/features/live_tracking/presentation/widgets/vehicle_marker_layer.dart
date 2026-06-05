@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_marker_widget.dart';
 
 class VehicleMarkerLayer extends StatefulWidget {
@@ -8,10 +8,12 @@ class VehicleMarkerLayer extends StatefulWidget {
     super.key,
     required this.mapController,
     required this.vehicles,
+    required this.selectedRoutesCount,
   });
 
   final MapController mapController;
-  final List<VehicleEntity> vehicles;
+  final List<Vehicle> vehicles;
+  final int selectedRoutesCount;
 
   @override
   State<VehicleMarkerLayer> createState() => _VehicleMarkerLayerState();
@@ -46,7 +48,10 @@ class _VehicleMarkerLayerState extends State<VehicleMarkerLayer> {
                   child: Tooltip(
                     message:
                         '${item.vehicle.govNumber} • ${item.vehicle.speed} км/год',
-                    child: VehicleMarkerWidget(vehicle: item.vehicle),
+                    child: VehicleMarkerWidget(
+                      vehicle: item.vehicle,
+                      selectedRoutesCount: widget.selectedRoutesCount,
+                    ),
                   ),
                 ),
               )
@@ -74,7 +79,7 @@ class _ProjectedVehicle {
     required this.top,
   });
 
-  final VehicleEntity vehicle;
+  final Vehicle vehicle;
   final double left;
   final double top;
 }

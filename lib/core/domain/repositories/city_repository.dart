@@ -2,7 +2,7 @@ import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 
 abstract class CityRepository {
   Future<List<City>> getCities();
@@ -17,5 +17,5 @@ abstract class CityRepository {
     required String cityId,
     required String zoneId,
   });
-  Future<List<VehicleEntity>> getCityVehicles(String cityId, {List<String>? routeIds});
+  Future<List<Vehicle>> getCityVehicles(String cityId, {List<String>? routeIds});
 }

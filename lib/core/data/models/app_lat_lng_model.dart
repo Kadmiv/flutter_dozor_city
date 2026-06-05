@@ -1,7 +1,7 @@
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 
-class AppLatLngModel {
-  const AppLatLngModel({
+class AppLatLngDto {
+  const AppLatLngDto({
     required this.lat,
     required this.lng,
   });
@@ -9,8 +9,8 @@ class AppLatLngModel {
   final double lat;
   final double lng;
 
-  factory AppLatLngModel.fromJson(Map<String, dynamic> json) {
-    return AppLatLngModel(
+  factory AppLatLngDto.fromJson(Map<String, dynamic> json) {
+    return AppLatLngDto(
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
     );
@@ -20,3 +20,5 @@ class AppLatLngModel {
     return AppLatLng(lat: lat, lng: lng);
   }
 }
+
+typedef AppLatLngModel = AppLatLngDto;

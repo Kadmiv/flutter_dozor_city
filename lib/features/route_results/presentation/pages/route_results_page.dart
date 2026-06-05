@@ -16,12 +16,30 @@ class RouteResultsPage extends StatelessWidget {
       value: cubit,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-        child: BlocBuilder<RouteResultsCubit, RouteResultsState>(
+        child: BlocConsumer<RouteResultsCubit, RouteResultsState>(
+          listenWhen: (previous, current) =>
+              previous.failure != current.failure && current.failure != null,
+          listener: (context, state) {
+            final failure = state.failure;
+            if (failure != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(failure.message)),
+              );
+            }
+          },
           builder: (context, state) {
             if (state.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state.results.isEmpty) {
+              if (state.failure != null) {
+                return Center(
+                  child: Text(
+                    'Помилка завантаження маршрутів:\n${state.failure!.message}',
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
               return const Center(
                 child: Text('Маршрути не знайдені або пошук ще не запускався'),
               );

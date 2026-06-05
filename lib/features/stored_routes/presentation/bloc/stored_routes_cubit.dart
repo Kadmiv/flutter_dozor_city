@@ -1,12 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
-import 'package:flutter_dozor_city/core/domain/repositories/stored_routes_repository.dart';
 import 'package:flutter_dozor_city/features/stored_routes/domain/usecases/delete_stored_route_use_case.dart';
 import 'package:flutter_dozor_city/features/stored_routes/domain/usecases/get_stored_routes_use_case.dart';
+import 'package:flutter_dozor_city/features/stored_routes/domain/usecases/watch_stored_routes_use_case.dart';
 
 class StoredRoutesState {
   const StoredRoutesState({
-    this.isLoading = false,
+    this.isLoading = true,
     this.routes = const [],
   });
 
@@ -27,37 +27,38 @@ class StoredRoutesState {
 class StoredRoutesCubit extends Cubit<StoredRoutesState> {
   StoredRoutesCubit({
     required GetStoredRoutesUseCase getStoredRoutesUseCase,
-    required StoredRoutesRepository storedRoutesRepository,
+    required WatchStoredRoutesUseCase watchStoredRoutesUseCase,
     required DeleteStoredRouteUseCase deleteStoredRouteUseCase,
   })  : _getStoredRoutesUseCase = getStoredRoutesUseCase,
-        _storedRoutesRepository = storedRoutesRepository,
+        _watchStoredRoutesUseCase = watchStoredRoutesUseCase,
         _deleteStoredRouteUseCase = deleteStoredRouteUseCase,
         super(const StoredRoutesState()) {
-    _storedRoutesRepository.addListener(_handleStoredRoutesChanged);
+    _watchStoredRoutesUseCase.addListener(_handleStoredRoutesChanged);
+    _load();
   }
 
   final GetStoredRoutesUseCase _getStoredRoutesUseCase;
-  final StoredRoutesRepository _storedRoutesRepository;
+  final WatchStoredRoutesUseCase _watchStoredRoutesUseCase;
   final DeleteStoredRouteUseCase _deleteStoredRouteUseCase;
 
-  Future<void> load() async {
+  Future<void> _load() async {
     emit(state.copyWith(isLoading: true));
     final routes = await _getStoredRoutesUseCase();
     emit(state.copyWith(isLoading: false, routes: routes));
   }
 
-  Future<void> deleteRoute(String routeId) async {
-    await _deleteStoredRouteUseCase(routeId);
-    await load();
+  Future<void> _handleStoredRoutesChanged() async {
+    final routes = await _getStoredRoutesUseCase();
+    emit(state.copyWith(routes: routes));
   }
 
-  Future<void> _handleStoredRoutesChanged() async {
-    await load();
+  Future<void> deleteRoute(String routeId) async {
+    await _deleteStoredRouteUseCase(routeId);
   }
 
   @override
   Future<void> close() {
-    _storedRoutesRepository.removeListener(_handleStoredRoutesChanged);
+    _watchStoredRoutesUseCase.removeListener(_handleStoredRoutesChanged);
     return super.close();
   }
 }

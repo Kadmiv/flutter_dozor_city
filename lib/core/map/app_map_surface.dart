@@ -6,13 +6,15 @@ import 'package:flutter_dozor_city/core/map/app_map_provider.dart';
 import 'package:flutter_dozor_city/core/map/google_map_surface.dart';
 import 'package:flutter_dozor_city/core/map/flutter_map_surface.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 
 class AppMapSurface extends StatelessWidget {
   const AppMapSurface({
     super.key,
     required this.mapController,
     required this.vehicles,
+    required this.selectedRoutesCount,
+    required this.routeColorsById,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
@@ -21,7 +23,9 @@ class AppMapSurface extends StatelessWidget {
   });
 
   final MapController mapController;
-  final List<VehicleEntity> vehicles;
+  final List<Vehicle> vehicles;
+  final int selectedRoutesCount;
+  final Map<String, int> routeColorsById;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
@@ -35,6 +39,8 @@ class AppMapSurface extends StatelessWidget {
         return GoogleMapSurface(
           mapController: mapController,
           vehicles: vehicles,
+          selectedRoutesCount: selectedRoutesCount,
+          routeColorsById: routeColorsById,
           routePolylines: routePolylines,
           previewGeometry: previewGeometry,
           previewStart: previewStart,
@@ -45,6 +51,8 @@ class AppMapSurface extends StatelessWidget {
         return FlutterMapSurface(
           mapController: mapController,
           vehicles: vehicles,
+          selectedRoutesCount: selectedRoutesCount,
+          routeColorsById: routeColorsById,
           routePolylines: routePolylines,
           previewGeometry: previewGeometry,
           previewStart: previewStart,

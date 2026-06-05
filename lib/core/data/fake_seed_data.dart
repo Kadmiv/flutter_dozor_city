@@ -7,7 +7,7 @@ import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
 import 'package:flutter_dozor_city/core/domain/entities/search_params.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 
 abstract final class FakeSeedData {
   static const cities = <City>[
@@ -219,10 +219,10 @@ abstract final class FakeSeedData {
     );
   }
 
-  static List<VehicleEntity> cityVehicles(String cityId) {
+  static List<Vehicle> cityVehicles(String cityId) {
     return List.generate(
       6,
-      (index) => VehicleEntity(
+      (index) => Vehicle(
         id: '$cityId-vehicle-$index',
         routeId: '$cityId-${index % 3}-${index % 2}',
         routeShortName: '${(index % 3) + 1}${(index % 2) + 1}',

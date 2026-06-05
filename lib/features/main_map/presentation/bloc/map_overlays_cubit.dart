@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
+import 'package:flutter_dozor_city/core/time/polling_scheduler.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_arrival_by_zone_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_route_zones_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_routes_by_type_use_case.dart';
@@ -74,15 +73,17 @@ class MapOverlaysCubit extends Cubit<MapOverlaysState> {
     required GetRoutesByTypeUseCase getRoutesByTypeUseCase,
     required GetRouteZonesUseCase getRouteZonesUseCase,
     required GetArrivalByZoneUseCase getArrivalByZoneUseCase,
+    required PollingScheduler pollingScheduler,
   })  : _getRoutesByTypeUseCase = getRoutesByTypeUseCase,
         _getRouteZonesUseCase = getRouteZonesUseCase,
         _getArrivalByZoneUseCase = getArrivalByZoneUseCase,
+        _pollingScheduler = pollingScheduler,
         super(const MapOverlaysState());
 
   final GetRoutesByTypeUseCase _getRoutesByTypeUseCase;
   final GetRouteZonesUseCase _getRouteZonesUseCase;
   final GetArrivalByZoneUseCase _getArrivalByZoneUseCase;
-  Timer? _arrivalPollingTimer;
+  final PollingScheduler _pollingScheduler;
 
   Future<void> selectTransportType({
     required String cityId,
@@ -138,7 +139,9 @@ class MapOverlaysCubit extends Cubit<MapOverlaysState> {
     final zones = await _getRouteZonesUseCase(route.id);
     emit(
       state.copyWith(
-        selectedRoutes: isSelected ? state.selectedRoutes : [...state.selectedRoutes, route],
+        selectedRoutes: isSelected
+            ? state.selectedRoutes
+            : [...state.selectedRoutes, route],
         activeCityId: cityId,
         activeRouteId: route.id,
         routeZones: zones,
@@ -190,9 +193,9 @@ class MapOverlaysCubit extends Cubit<MapOverlaysState> {
       ),
     );
     await _loadArrival(cityId: cityId, zoneId: zoneId);
-    _arrivalPollingTimer = Timer.periodic(
+    _pollingScheduler.start(
       const Duration(seconds: 15),
-      (_) => _loadArrival(cityId: cityId, zoneId: zoneId),
+      () => _loadArrival(cityId: cityId, zoneId: zoneId),
     );
   }
 
@@ -259,8 +262,7 @@ class MapOverlaysCubit extends Cubit<MapOverlaysState> {
   }
 
   void _stopArrivalPolling() {
-    _arrivalPollingTimer?.cancel();
-    _arrivalPollingTimer = null;
+    _pollingScheduler.stop();
   }
 
   void reset() {

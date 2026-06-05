@@ -25,13 +25,29 @@ class _SelectCityPageState extends State<SelectCityPage> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: widget.cubit,
-      child: BlocListener<CitySelectionCubit, CitySelectionState>(
-        listenWhen: (previous, current) =>
-            previous.selectedCity != current.selectedCity &&
-            current.selectedCity != null,
-        listener: (context, state) {
-          context.goNamed(AppRouteNames.search);
-        },
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<CitySelectionCubit, CitySelectionState>(
+            listenWhen: (previous, current) =>
+                previous.selectedCity != current.selectedCity &&
+                current.selectedCity != null,
+            listener: (context, state) {
+              context.goNamed(AppRouteNames.search);
+            },
+          ),
+          BlocListener<CitySelectionCubit, CitySelectionState>(
+            listenWhen: (previous, current) =>
+                previous.failure != current.failure && current.failure != null,
+            listener: (context, state) {
+              final failure = state.failure;
+              if (failure != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(failure.message)),
+                );
+              }
+            },
+          ),
+        ],
         child: Scaffold(
           backgroundColor: const Color(0xFFF5F0E5),
           body: CityPickerContent(

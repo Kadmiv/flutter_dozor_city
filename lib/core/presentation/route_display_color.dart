@@ -11,9 +11,10 @@ abstract final class RouteDisplayColor {
     if (seed.isEmpty) {
       return const Color(0xFF1C4F7A).toARGB32();
     }
-    var hash = 0;
+    var hash = 0x811c9dc5;
     for (final codeUnit in seed.codeUnits) {
-      hash = ((hash * 31) + codeUnit) & 0x7fffffff;
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0x7fffffff;
     }
     final hue = (hash % 360).toDouble();
     final saturation = 0.68 + ((hash % 7) * 0.02);

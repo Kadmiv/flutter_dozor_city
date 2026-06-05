@@ -4,7 +4,7 @@ import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/network/api_paths.dart';
 import 'package:flutter_dozor_city/features/city_selection/presentation/bloc/city_selection_cubit.dart';
 
-class CityPickerContent extends StatelessWidget {
+class CityPickerContent extends StatefulWidget {
   const CityPickerContent({
     super.key,
     this.showHeader = true,
@@ -19,15 +19,32 @@ class CityPickerContent extends StatelessWidget {
   final Future<void> Function(BuildContext context, City city)? onCityTapOverride;
 
   @override
+  State<CityPickerContent> createState() => _CityPickerContentState();
+}
+
+class _CityPickerContentState extends State<CityPickerContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocBuilder<CitySelectionCubit, CitySelectionState>(
       builder: (context, state) {
         if (state.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
+
+        final filteredCities = _filterCities(state.cities, _query);
+
         return Column(
           children: [
-            if (showHeader)
+            if (widget.showHeader)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
@@ -45,16 +62,14 @@ class CityPickerContent extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            onPressed: onBack,
-                            icon: const Icon(
-                              Icons.arrow_back,
-                            ),
+                            onPressed: widget.onBack,
+                            icon: const Icon(Icons.arrow_back),
                             tooltip: 'Назад',
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              title,
+                              widget.title,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -77,36 +92,157 @@ class CityPickerContent extends StatelessWidget {
                   ),
                 ),
               ),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                itemBuilder: (context, index) {
-                  final city = state.cities[index];
-                  final isBusy = state.isSubmitting && state.selectedCity == city;
-                  return _CityRow(
-                    city: city,
-                    isBusy: isBusy,
-                    onTap: state.isSubmitting
-                        ? null
-                        : () async {
-                            final onCityTap = onCityTapOverride;
-                            if (onCityTap != null) {
-                              await onCityTap(context, city);
-                              return;
-                            }
-                            await context
-                                .read<CitySelectionCubit>()
-                                .selectCity(city);
-                          },
-                  );
-                },
-                separatorBuilder: (_, index) => const SizedBox(height: 8),
-                itemCount: state.cities.length,
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                widget.showHeader ? 14 : 16,
+                16,
+                8,
               ),
+              child: _CitySearchField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _query = value),
+                onClear: _query.isEmpty
+                    ? null
+                    : () {
+                        _searchController.clear();
+                        setState(() => _query = '');
+                      },
+              ),
+            ),
+            Expanded(
+              child: filteredCities.isEmpty
+                  ? const _EmptyCitiesState()
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                      itemBuilder: (context, index) {
+                        final city = filteredCities[index];
+                        final isBusy =
+                            state.isSubmitting && state.selectedCity == city;
+                        return _CityRow(
+                          city: city,
+                          isBusy: isBusy,
+                          onTap: state.isSubmitting
+                              ? null
+                              : () async {
+                                  final onCityTap = widget.onCityTapOverride;
+                                  if (onCityTap != null) {
+                                    await onCityTap(context, city);
+                                    return;
+                                  }
+                                  await context.read<CitySelectionCubit>().selectCity(city);
+                                },
+                        );
+                      },
+                      separatorBuilder: (_, index) => const SizedBox(height: 8),
+                      itemCount: filteredCities.length,
+                    ),
             ),
           ],
         );
       },
+    );
+  }
+
+  List<City> _filterCities(List<City> cities, String query) {
+    final normalizedQuery = _normalize(query);
+    if (normalizedQuery.isEmpty) {
+      return cities;
+    }
+    return cities
+        .where((city) => _matchesCity(city, normalizedQuery))
+        .toList(growable: false);
+  }
+
+  bool _matchesCity(City city, String normalizedQuery) {
+    final haystack = _normalize('${city.name} ${city.region}');
+    if (haystack.contains(normalizedQuery)) {
+      return true;
+    }
+    return _isSubsequence(normalizedQuery, haystack);
+  }
+
+  String _normalize(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\s\-_.,()]+'), '')
+        .replaceAll('ь', '')
+        .replaceAll('ъ', '')
+        .replaceAll('і', 'и');
+  }
+
+  bool _isSubsequence(String needle, String haystack) {
+    if (needle.isEmpty) {
+      return true;
+    }
+    var index = 0;
+    for (final codeUnit in haystack.codeUnits) {
+      if (codeUnit == needle.codeUnitAt(index)) {
+        index++;
+        if (index == needle.length) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+}
+
+class _CitySearchField extends StatelessWidget {
+  const _CitySearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Пошук міста',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: onClear == null
+            ? null
+            : IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+                tooltip: 'Очистити пошук',
+              ),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+}
+
+class _EmptyCitiesState extends StatelessWidget {
+  const _EmptyCitiesState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'Місто не знайдено',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.black.withValues(alpha: 0.58),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

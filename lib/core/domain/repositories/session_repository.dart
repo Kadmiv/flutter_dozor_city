@@ -1,15 +1,16 @@
-import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/city_session_repository.dart';
+import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/map_camera_repository.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/ui_flags_repository.dart';
 
-abstract class SessionRepository extends ChangeNotifier {
-  City? get selectedCity;
-  bool get hasSelectedCity;
-  Future<void> setSelectedCity(City city);
+abstract class SessionRepository extends ChangeNotifier 
+    implements CitySessionRepository, MapCameraRepository, UiFlagsRepository {
   Future<int?> getRoutesCacheHash(String cityId);
   Future<void> setRoutesCacheHash(String cityId, int hash);
-  Future<AppMapCamera?> getMapCamera(String cityId);
-  Future<void> setMapCamera(String cityId, AppMapCamera camera);
-  Future<bool> getUiFlag(String key);
-  Future<void> setUiFlag(String key, bool value);
+  Future<SelectedMapRoutes?> getSelectedMapRoutes(String cityId);
+  Future<void> setSelectedMapRoutes(
+    String cityId,
+    SelectedMapRoutes selectedMapRoutes,
+  );
 }

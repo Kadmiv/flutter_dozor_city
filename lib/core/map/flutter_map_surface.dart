@@ -5,7 +5,8 @@ import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/flutter_map_controller_adapter.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
+import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_marker_widget.dart';
 import 'package:flutter_map/flutter_map.dart' hide MapController;
 import 'package:latlong2/latlong.dart' as ll;
 
@@ -14,6 +15,8 @@ class FlutterMapSurface extends StatelessWidget {
     super.key,
     required this.mapController,
     required this.vehicles,
+    required this.selectedRoutesCount,
+    required this.routeColorsById,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
@@ -22,7 +25,9 @@ class FlutterMapSurface extends StatelessWidget {
   });
 
   final MapController mapController;
-  final List<VehicleEntity> vehicles;
+  final List<Vehicle> vehicles;
+  final int selectedRoutesCount;
+  final Map<String, int> routeColorsById;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
@@ -80,15 +85,12 @@ class FlutterMapSurface extends StatelessWidget {
         .map(
           (vehicle) => Marker(
             point: ll.LatLng(vehicle.lat, vehicle.lng),
-            width: 40,
-            height: 40,
-            child: Transform.rotate(
-              angle: vehicle.azimuth.toDouble() * (3.1415926535897932 / 180),
-              child: const Icon(
-                Icons.navigation,
-                color: Colors.blue,
-                size: 30,
-              ),
+            width: 60,
+            height: 72,
+            child: VehicleMarkerWidget(
+              vehicle: vehicle,
+              selectedRoutesCount: selectedRoutesCount,
+              routeColorValue: routeColorsById[vehicle.routeId],
             ),
           ),
         )

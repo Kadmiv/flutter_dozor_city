@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_dozor_city/core/data/models/json_route_devices_model.dart';
+import 'package:flutter_dozor_city/features/city_data/data/models/route_devices_dto.dart';
 
 void main() {
   group('JsonRouteDevicesModel', () {

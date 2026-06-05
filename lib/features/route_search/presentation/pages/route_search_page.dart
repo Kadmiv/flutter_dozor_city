@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dozor_city/core/di/injector.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
-import 'package:flutter_dozor_city/core/domain/repositories/search_repository.dart';
 import 'package:flutter_dozor_city/core/router/app_route_names.dart';
-import 'package:flutter_dozor_city/features/point_select/domain/usecases/get_current_location_use_case.dart';
-import 'package:flutter_dozor_city/features/point_select/domain/usecases/search_address_suggestions_use_case.dart';
+import 'package:flutter_dozor_city/core/router/route_args.dart';
 import 'package:flutter_dozor_city/features/point_select/presentation/bloc/point_select_cubit.dart';
 import 'package:flutter_dozor_city/features/point_select/presentation/pages/point_select_page.dart';
 import 'package:flutter_dozor_city/features/route_search/presentation/bloc/route_search_cubit.dart';
 import 'package:go_router/go_router.dart';
 
 class RouteSearchPage extends StatefulWidget {
-  const RouteSearchPage({super.key, required this.cubit});
+  const RouteSearchPage({
+    super.key,
+    required this.cubit,
+    required this.createPointSelectCubit,
+  });
 
   final RouteSearchCubit cubit;
+  final PointSelectCubit Function() createPointSelectCubit;
 
   @override
   State<RouteSearchPage> createState() => _RouteSearchPageState();
@@ -111,7 +113,7 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
                                 }
                                 context.goNamed(
                                   AppRouteNames.results,
-                                  extra: params,
+                                  extra: RouteResultsArgs(params),
                                 );
                               },
                             ),
@@ -143,19 +145,14 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
   }
 
   Future<void> _pickPoint(BuildContext context, {required bool isStart}) async {
+    final pointSelectCubit = widget.createPointSelectCubit();
     final point = await showDialog<SelectedPoint>(
       context: context,
       builder: (_) => PointSelectPage(
-        cubit: PointSelectCubit(
-          searchAddressSuggestionsUseCase: SearchAddressSuggestionsUseCase(
-            injector<SearchRepository>(),
-          ),
-          getCurrentLocationUseCase: GetCurrentLocationUseCase(
-            injector<SearchRepository>(),
-          ),
-        ),
+        cubit: pointSelectCubit,
       ),
     );
+    await pointSelectCubit.close();
 
     if (point == null || !context.mounted) {
       return;

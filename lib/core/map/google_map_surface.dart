@@ -5,7 +5,7 @@ import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/map/google_map_controller_adapter.dart';
-import 'package:flutter_dozor_city/features/live_tracking/domain/entities/vehicle_entity.dart';
+import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 class GoogleMapSurface extends StatelessWidget {
@@ -13,6 +13,8 @@ class GoogleMapSurface extends StatelessWidget {
     super.key,
     required this.mapController,
     required this.vehicles,
+    required this.selectedRoutesCount,
+    required this.routeColorsById,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
@@ -21,7 +23,9 @@ class GoogleMapSurface extends StatelessWidget {
   });
 
   final MapController mapController;
-  final List<VehicleEntity> vehicles;
+  final List<Vehicle> vehicles;
+  final int selectedRoutesCount;
+  final Map<String, int> routeColorsById;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
@@ -76,6 +80,11 @@ class GoogleMapSurface extends StatelessWidget {
             position: gmaps.LatLng(vehicle.lat, vehicle.lng),
             rotation: vehicle.azimuth.toDouble(),
             anchor: const Offset(0.5, 0.5),
+            icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+              _markerHueForColor(
+                Color(routeColorsById[vehicle.routeId] ?? 0xFFC8102E),
+              ),
+            ),
             infoWindow: gmaps.InfoWindow(
               title: 'Маршрут ${vehicle.routeShortName} • ${vehicle.govNumber}',
               snippet: '${vehicle.routeTitle} • ${vehicle.speed} км/год',
@@ -116,6 +125,11 @@ class GoogleMapSurface extends StatelessWidget {
       );
     }
     return markers;
+  }
+
+  double _markerHueForColor(Color color) {
+    final hsv = HSVColor.fromColor(color);
+    return hsv.hue;
   }
 
   Set<gmaps.Polyline> _buildPolylines() {
