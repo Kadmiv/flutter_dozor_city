@@ -1,0 +1,1 @@
+dart compile exe bin/server.dart -o build/eta_server

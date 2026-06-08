@@ -9,12 +9,16 @@ class ServiceConfig {
     required this.host,
     required this.port,
     required this.batumiBaseUrl,
+    required this.autoSyncEnabled,
+    required this.syncIntervalSeconds,
   });
 
   final String dbPath;
   final String host;
   final int port;
   final String batumiBaseUrl;
+  final bool autoSyncEnabled;
+  final int syncIntervalSeconds;
 
   factory ServiceConfig.fromEnvironment({List<String> args = const []}) {
     final parser = ArgParser()
@@ -23,6 +27,8 @@ class ServiceConfig {
       ..addOption('host')
       ..addOption('port')
       ..addOption('batumi-base-url')
+      ..addOption('auto-sync')
+      ..addOption('sync-interval-seconds')
       ..addOption('route-id')
       ..addOption('out');
     final parsed = parser.parse(args);
@@ -54,11 +60,45 @@ class ServiceConfig {
           parsed['batumi-base-url'] as String? ??
           Platform.environment['BATUMI_BASE_URL'] ??
           'https://thetamaps.site:54321',
+      autoSyncEnabled: _bool(
+        parsed['auto-sync'] as String? ?? Platform.environment['ETA_AUTO_SYNC'],
+        defaultValue: true,
+      ),
+      syncIntervalSeconds: _syncIntervalSeconds(
+        parsed['sync-interval-seconds'] as String? ??
+            Platform.environment['ETA_SYNC_INTERVAL_SECONDS'] ??
+            Platform.environment['ETA_SYNC_INTERVAL_MINUTES'],
+      ),
     );
   }
 
   static String _projectRoot() {
     final scriptPath = Platform.script.toFilePath();
     return p.dirname(p.dirname(scriptPath));
+  }
+
+  static bool _bool(String? raw, {required bool defaultValue}) {
+    if (raw == null || raw.trim().isEmpty) {
+      return defaultValue;
+    }
+    final value = raw.trim().toLowerCase();
+    return value == '1' || value == 'true' || value == 'yes' || value == 'on';
+  }
+
+  static int _syncIntervalSeconds(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return 5;
+    }
+    final parsed = int.tryParse(raw);
+    if (parsed == null || parsed <= 0) {
+      return 5;
+    }
+    if (Platform.environment['ETA_SYNC_INTERVAL_SECONDS'] != null) {
+      return parsed;
+    }
+    if (Platform.environment['ETA_SYNC_INTERVAL_MINUTES'] != null) {
+      return parsed * 60;
+    }
+    return parsed;
   }
 }

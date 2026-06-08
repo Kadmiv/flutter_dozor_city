@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 
+import '../analysis/segment_load_analyzer.dart';
 import '../batumi/batumi_api_client.dart';
 import '../config/service_config.dart';
 import '../db/eta_database.dart';
 import '../export/json_stats_exporter.dart';
 import '../logging/service_logger.dart';
+import '../sync/batumi_sync_service.dart';
 
 Future<void> runEtaCli(List<String> args) async {
   if (args.isEmpty) {
@@ -44,6 +46,16 @@ Future<void> runEtaCli(List<String> args) async {
           logger,
           args.skip(1).toList(growable: false),
         );
+        break;
+      case 'analyze-segments':
+        await _analyzeSegments(
+          database,
+          logger,
+          args.skip(1).toList(growable: false),
+        );
+        break;
+      case 'sync-batumi':
+        await _syncBatumi(database, config, logger);
         break;
       default:
         _usage();
@@ -115,9 +127,45 @@ Future<void> _exportJson(
   logger.info('Exported snapshot to $outPath');
 }
 
+Future<void> _analyzeSegments(
+  EtaDatabase database,
+  ServiceLogger logger,
+  List<String> args,
+) async {
+  final parser = _buildParser()..addOption('route-id');
+  final result = parser.parse(args);
+  final routeId = result['route-id'] as String?;
+  final analyzer = SegmentLoadAnalyzer(logger: logger);
+  logger.info(
+    routeId == null || routeId.isEmpty
+        ? 'Analyzing segment load for all routes with GPS data'
+        : 'Analyzing segment load for route $routeId',
+  );
+  final analysisResult = analyzer.analyze(database, routeId: routeId);
+  logger.info(
+    'Segment analysis complete: routes=${analysisResult.routeCount}, gps=${analysisResult.gpsRead}, matched=${analysisResult.matchedPoints}, segmentEvents=${analysisResult.segmentEvents}, aggregatedRows=${analysisResult.aggregatedRows}',
+  );
+}
+
+Future<void> _syncBatumi(
+  EtaDatabase database,
+  ServiceConfig config,
+  ServiceLogger logger,
+) async {
+  final syncService = BatumiSyncService(
+    database: database,
+    config: config,
+    logger: logger,
+  );
+  logger.info(
+    'Running one-shot Batumi sync: snapshot refresh plus live poll, no segment analysis',
+  );
+  await syncService.syncOnce();
+}
+
 void _usage() {
   stderr.writeln(
-    'Usage: migrate | import-batumi | poll-batumi --route-id <id> | export-json --out <path>',
+    'Usage: migrate | import-batumi | poll-batumi --route-id <id> | sync-batumi | analyze-segments [--route-id <id>] | export-json --out <path>',
   );
 }
 

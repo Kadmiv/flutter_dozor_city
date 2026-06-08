@@ -46,6 +46,8 @@ void main() {
 
     final file = File(outPath);
     expect(file.existsSync(), isTrue);
-    expect(file.readAsStringSync(), contains('"routes"'));
+    final contents = file.readAsStringSync();
+    expect(contents, contains('"routes"'));
+    expect(contents, isNot(contains('"gps_positions"')));
   });
 }

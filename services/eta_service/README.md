@@ -8,6 +8,9 @@ Standalone Dart service for collecting Batumi GPS data into SQLite and exporting
 dart run bin/eta_service.dart migrate
 dart run bin/eta_service.dart import-batumi
 dart run bin/eta_service.dart poll-batumi --route-id 123
+dart run bin/eta_service.dart analyze-segments --route-id 123
+dart run bin/eta_service.dart sync-batumi
+dart run bin/analyzer.dart analyze-segments --route-id 123
 dart run bin/eta_service.dart export-json --out ./snapshot.json
 dart run bin/server.dart
 ```
@@ -18,5 +21,8 @@ dart run bin/server.dart
 - `ETA_DB_PATH` overrides the full SQLite path.
 - `ETA_HOST` and `ETA_PORT` control the HTTP listener.
 - `BATUMI_BASE_URL` controls the Batumi/thetamaps upstream, defaulting to `https://thetamaps.site:54321`.
+- `ETA_AUTO_SYNC` enables background sync on server start, defaulting to `true`.
+- `ETA_SYNC_INTERVAL_SECONDS` controls how often the background live polling repeats, defaulting to `5`.
+- `ETA_SYNC_INTERVAL_MINUTES` is still accepted for compatibility and is converted to seconds.
 
 By default the database is stored at `services/eta_service/runtime/eta_service.db`.

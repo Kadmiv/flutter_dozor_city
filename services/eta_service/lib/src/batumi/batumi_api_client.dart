@@ -132,7 +132,6 @@ class BatumiApiClient {
             speed: 0,
             azimuth: 0,
             govNumber: _string(item['Name']),
-            rawJson: item,
           ),
         )
         .toList(growable: false);

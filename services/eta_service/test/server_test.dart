@@ -67,6 +67,13 @@ void main() {
 
     final list = await http.get(base.resolve('/gps?vehicleId=v1&limit=10'));
     expect(list.statusCode, 200);
-    expect(jsonDecode(list.body)['items'], hasLength(1));
+    final items = jsonDecode(list.body)['items'] as List<dynamic>;
+    expect(items, hasLength(1));
+    expect(
+      items.single.keys,
+      containsAll(['vehicleId', 'routeId', 'timestampMs', 'lat', 'lon']),
+    );
+    expect(items.single.containsKey('speed'), isFalse);
+    expect(items.single.containsKey('govNumber'), isFalse);
   });
 }

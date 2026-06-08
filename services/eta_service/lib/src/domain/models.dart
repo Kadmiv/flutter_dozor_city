@@ -23,19 +23,12 @@ class GpsPosition {
   final String govNumber;
   final Map<String, Object?>? rawJson;
 
-  String get dedupeKey =>
-      '$vehicleId|$routeId|$timestampMs|${lat.toStringAsFixed(6)}|${lon.toStringAsFixed(6)}';
-
   Map<String, Object?> toJson() => {
     'vehicleId': vehicleId,
     'routeId': routeId,
     'timestampMs': timestampMs,
     'lat': lat,
     'lon': lon,
-    'speed': speed,
-    'azimuth': azimuth,
-    'govNumber': govNumber,
-    if (rawJson != null) 'raw': rawJson,
   };
 
   static GpsPosition fromJson(Map<String, Object?> json) {
@@ -115,6 +108,40 @@ class RoutePolylineRecord {
   final List<Map<String, Object?>> points;
 
   String get pointsJson => jsonEncode(points);
+}
+
+class RouteTrackStop {
+  const RouteTrackStop({
+    required this.stopId,
+    required this.name,
+    required this.lat,
+    required this.lon,
+    required this.number,
+    required this.stopOrder,
+    required this.status,
+    required this.times,
+  });
+
+  final String stopId;
+  final String name;
+  final double lat;
+  final double lon;
+  final int number;
+  final int stopOrder;
+  final int status;
+  final List<String> times;
+}
+
+class RouteTrackData {
+  const RouteTrackData({
+    required this.route,
+    required this.stops,
+    required this.polylineSegments,
+  });
+
+  final RouteRecord route;
+  final List<RouteTrackStop> stops;
+  final List<List<Map<String, Object?>>> polylineSegments;
 }
 
 class SegmentEventRecord {
