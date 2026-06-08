@@ -52,5 +52,10 @@ class InMemoryCityRepository implements CityRepository, CitiesRepository, CityDa
   }
 
   @override
+  Future<List<RouteZone>> getCityStops(String cityId) async {
+    return FakeSeedData.cityStops(cityId);
+  }
+
+  @override
   Future<void> preloadCityData(String cityId) async {}
 }

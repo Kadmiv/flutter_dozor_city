@@ -70,6 +70,11 @@ class CompositeCityRemoteDataSource implements CityRemoteDataSource {
   }
 
   @override
+  Future<List<RouteZone>> getCityStops(String cityId) {
+    return _remoteFor(cityId).getCityStops(cityId);
+  }
+
+  @override
   Future<ArrivalInfo> getArrivalByZone({
     required String cityId,
     required String zoneId,

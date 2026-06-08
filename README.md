@@ -29,3 +29,7 @@ flutter run
 - Android and iOS platform folders were generated from Flutter tooling and now include Google Maps runtime hooks.
 - Without valid API keys the map widget will not work correctly on device.
 - Current runtime ids are configured as `ua.dozorcity.app` and should be adjusted if the final release ids differ.
+
+## Service
+
+- The ETA collector backend now lives in [`services/eta_service`](services/eta_service/README.md).

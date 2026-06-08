@@ -1,6 +1,7 @@
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_arrival.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_preview_segment.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
@@ -214,6 +215,25 @@ abstract final class FakeSeedData {
         id: '$routeId-zone-$index',
         routeId: routeId,
         name: 'Зупинка ${index + 1} для $routeId',
+        position: AppLatLng(
+          lat: 50.25 + (index * 0.0013),
+          lng: 28.66 + (index * 0.0011),
+        ),
+      ),
+    );
+  }
+
+  static List<RouteZone> cityStops(String cityId) {
+    return List.generate(
+      8,
+      (index) => RouteZone(
+        id: '$cityId-stop-$index',
+        routeId: '$cityId-route-${index % 3}',
+        name: 'Зупинка ${index + 1}',
+        position: AppLatLng(
+          lat: 50.25 + (index * 0.0021),
+          lng: 28.66 + (index * 0.0014),
+        ),
       ),
     );
   }
@@ -224,6 +244,15 @@ abstract final class FakeSeedData {
       busMinutes: const [2, 7, 14],
       trolleyMinutes: const [5, 11],
       tramMinutes: const [8, 16],
+      routeArrivals: const [
+        RouteArrival(
+          routeId: 'route-1',
+          routeShortName: '1',
+          busId: 'bus-1',
+          busName: 'AA 100 AA',
+          minute: 2,
+        ),
+      ],
     );
   }
 

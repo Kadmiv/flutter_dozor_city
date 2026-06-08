@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element
 
 part of '../pages/main_map_page.dart';
+
 class _LegacyTopMenu extends StatelessWidget {
   const _LegacyTopMenu({required this.onOpenCityPicker});
 
@@ -11,61 +12,156 @@ class _LegacyTopMenu extends StatelessWidget {
     return BlocBuilder<MainMapCubit, MainMapState>(
       builder: (context, state) {
         final cityName = state.city?.name ?? 'Оберіть місто';
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C4F7A),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.16),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              children: [
-                _TopMenuChip(
-                  icon: Icons.location_city,
-                  label: cityName,
-                  onTap: () {
-                    onOpenCityPicker();
-                  },
-                ),
-                const SizedBox(width: 8),
-                // const _AlarmIndicator(),
-                const SizedBox(width: 8),
-                _TopMenuChip(
-                  icon: state.mode == MainMapMode.routes
-                      ? Icons.alt_route
-                      : Icons.map_outlined,
-                  label: state.mode == MainMapMode.routes
-                      ? 'Маршрути'
-                      : 'Місто',
-                  isActive: state.mode == MainMapMode.routes,
-                  onTap: () {
-                    context.read<MainMapCubit>().setRouteMode(
-                      MainMapMode.routes,
+        return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+          builder: (context, languageState) {
+            return BlocBuilder<MapRoutePlanningCubit, MapRoutePlanningState>(
+              builder: (context, planningState) {
+                return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+                  builder: (context, routesState) {
+                    final statusLabel = switch (routesState.selectedStatus) {
+                      RouteStatusFilter.all => 'All',
+                      RouteStatusFilter.status1 => '1',
+                      RouteStatusFilter.status2 => '2',
+                      RouteStatusFilter.unknown => '?',
+                    };
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C4F7A),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 18,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          children: [
+                            _TopMenuChip(
+                              key: const Key('top-menu-city'),
+                              icon: Icons.location_city,
+                              label: cityName,
+                              onTap: onOpenCityPicker,
+                            ),
+                            const SizedBox(width: 8),
+                            _TopMenuChip(
+                              key: const Key('top-menu-routes'),
+                              icon: state.mode == MainMapMode.routes
+                                  ? Icons.alt_route
+                                  : Icons.map_outlined,
+                              label: state.mode == MainMapMode.routes
+                                  ? 'Маршрути'
+                                  : 'Місто',
+                              isActive: state.mode == MainMapMode.routes,
+                              onTap: () {
+                                context.read<MainMapCubit>().setRouteMode(
+                                  MainMapMode.routes,
+                                );
+                                context.read<MainMapCubit>().openBottomSheet(
+                                  tab: MainMapTab.search,
+                                );
+                                context.goNamed(AppRouteNames.search);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _TopMenuChip(
+                              key: const Key('top-menu-planning'),
+                              icon:
+                                  planningState.mode ==
+                                      MapRoutePlanningMode.inactive
+                                  ? Icons.route
+                                  : Icons.route_outlined,
+                              label:
+                                  planningState.mode ==
+                                      MapRoutePlanningMode.inactive
+                                  ? 'План'
+                                  : 'План A/B',
+                              isActive:
+                                  planningState.mode !=
+                                  MapRoutePlanningMode.inactive,
+                              onTap: () {
+                                if (planningState.mode ==
+                                    MapRoutePlanningMode.inactive) {
+                                  context
+                                      .read<MapRoutePlanningCubit>()
+                                      .startPlanning();
+                                  context
+                                      .read<MainMapCubit>()
+                                      .setActiveMapActionLabel(
+                                        'Обери стартову точку на мапі',
+                                      );
+                                } else {
+                                  context
+                                      .read<MapRoutePlanningCubit>()
+                                      .cancel();
+                                  context.read<RoutePreviewCubit>().clear();
+                                  context
+                                      .read<MainMapCubit>()
+                                      .setActiveMapActionLabel(
+                                        'Режим маршрутів',
+                                      );
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _TopMenuChip(
+                              key: const Key('top-menu-status'),
+                              icon: Icons.tune,
+                              label: 'Статус $statusLabel',
+                              onTap: () {
+                                final next =
+                                    switch (routesState.selectedStatus) {
+                                      RouteStatusFilter.all =>
+                                        RouteStatusFilter.status1,
+                                      RouteStatusFilter.status1 =>
+                                        RouteStatusFilter.status2,
+                                      RouteStatusFilter.status2 =>
+                                        RouteStatusFilter.unknown,
+                                      RouteStatusFilter.unknown =>
+                                        RouteStatusFilter.all,
+                                    };
+                                context.read<MapRoutesCubit>().setStatusFilter(
+                                  next,
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _TopMenuChip(
+                              key: const Key('top-menu-language'),
+                              icon: Icons.language,
+                              label:
+                                  languageState.language ==
+                                      AppDisplayLanguage.en
+                                  ? 'EN'
+                                  : 'KA',
+                              onTap: () {
+                                context.read<MapLanguageCubit>().toggle();
+                              },
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: onOpenCityPicker,
+                              icon: const Icon(
+                                Icons.sync_alt,
+                                color: Colors.white,
+                              ),
+                              tooltip: 'Змінити місто',
+                            ),
+                          ],
+                        ),
+                      ),
                     );
-                    context.read<MainMapCubit>().openBottomSheet(
-                      tab: MainMapTab.search,
-                    );
-                    context.goNamed(AppRouteNames.search);
                   },
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {
-                    onOpenCityPicker();
-                  },
-                  icon: const Icon(Icons.sync_alt, color: Colors.white),
-                  tooltip: 'Змінити місто',
-                ),
-              ],
-            ),
-          ),
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -74,6 +170,7 @@ class _LegacyTopMenu extends StatelessWidget {
 
 class _TopMenuChip extends StatelessWidget {
   const _TopMenuChip({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
@@ -158,78 +255,419 @@ class _SelectedRoutesWrap extends StatelessWidget {
         if (state.selectedRoutes.isEmpty) {
           return const SizedBox.shrink();
         }
-        return Align(
-          alignment: Alignment.topLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: DecoratedBox(
-              key: const Key('selected-routes-wrap'),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    blurRadius: 20,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                height: 56,
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(10),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: state.selectedRoutes.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final route = state.selectedRoutes[index];
-                    final selected = state.activeRouteId == route.id;
-                    final routeColor = Color(route.lineColorValue);
-                    return InkWell(
-                      onTap: () => onRouteTap(route),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Ink(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: routeColor.withValues(alpha: selected ? 0.28 : 0.14),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: routeColor.withValues(alpha: 0.28)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              route.shortName,
-                              style: TextStyle(
-                                color: routeColor,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () async {
-                                await onRouteRemove(route);
-                              },
-                              borderRadius: BorderRadius.circular(999),
-                              child: const Icon(
-                                Icons.close,
-                                size: 16,
-                                color: Color(0xFFD64545),
-                              ),
-                            ),
-                          ],
-                        ),
+        return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+          builder: (context, languageState) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: DecoratedBox(
+                  key: const Key('selected-routes-wrap'),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 20,
+                        offset: const Offset(0, 12),
                       ),
-                    );
-                  },
+                    ],
+                  ),
+                  child: SizedBox(
+                    height: 56,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(10),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: state.selectedRoutes.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final route = state.selectedRoutes[index];
+                        final selected = state.activeRouteId == route.id;
+                        final routeColor = Color(route.lineColorValue);
+                        return InkWell(
+                          onTap: () => onRouteTap(route),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Ink(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: routeColor.withValues(
+                                alpha: selected ? 0.28 : 0.14,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: routeColor.withValues(alpha: 0.28),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  route.displayShortName(
+                                    languageState.language,
+                                  ),
+                                  style: TextStyle(
+                                    color: routeColor,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    await onRouteRemove(route);
+                                  },
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Color(0xFFD64545),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
+    );
+  }
+}
+
+class _RoutePlanningPanel extends StatelessWidget {
+  const _RoutePlanningPanel({required this.state});
+
+  final MapRoutePlanningState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.route, size: 18, color: Color(0xFF1C4F7A)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Побудова маршруту',
+                        style: const TextStyle(
+                          color: Color(0xFF17324D),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () =>
+                          context.read<MapRoutePlanningCubit>().cancel(),
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'Завершити',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  state.mode == MapRoutePlanningMode.selectingStart
+                      ? 'Торкніться карти, щоб вибрати старт'
+                      : state.mode == MapRoutePlanningMode.selectingEnd
+                      ? 'Торкніться карти, щоб вибрати фініш'
+                      : 'Оберіть пункти або натисніть пошук',
+                  style: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.68),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _RoutePointChip(
+                        label: 'Від',
+                        value: state.start?.label ?? 'Натисніть мапу',
+                        onTap: () => context
+                            .read<MapRoutePlanningCubit>()
+                            .startSelectingStart(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _RoutePointChip(
+                        label: 'До',
+                        value: state.end?.label ?? 'Натисніть мапу',
+                        onTap: () => context
+                            .read<MapRoutePlanningCubit>()
+                            .startSelectingEnd(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: List.generate(5, (index) {
+                    final selected = state.transportTypes.contains(index);
+                    return _TransportMiniToggle(
+                      icon: _transportTypeIcon(index),
+                      selected: selected,
+                      onTap: () => context
+                          .read<MapRoutePlanningCubit>()
+                          .toggleTransportType(index),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 10),
+                if (state.isLoading)
+                  const LinearProgressIndicator(minHeight: 2),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _RoundActionButton(
+                      icon: Icons.swap_vert,
+                      onTap: () => context.read<MapRoutePlanningCubit>().swap(),
+                    ),
+                    const SizedBox(width: 8),
+                    _RoundActionButton(
+                      icon: Icons.search,
+                      onTap: () =>
+                          context.read<MapRoutePlanningCubit>().search(),
+                    ),
+                    const SizedBox(width: 8),
+                    _RoundActionButton(
+                      icon: Icons.delete_outline,
+                      onTap: () =>
+                          context.read<MapRoutePlanningCubit>().clear(),
+                    ),
+                    const Spacer(),
+                    Text(
+                      state.results.isEmpty
+                          ? '0 варіантів'
+                          : '${state.results.length} варіантів',
+                      style: const TextStyle(
+                        color: Color(0xFF17324D),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                if (state.results.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 38,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: state.results.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final result = state.results[index];
+                        final active = state.activeResult?.id == result.id;
+                        return InkWell(
+                          onTap: () => context
+                              .read<MapRoutePlanningCubit>()
+                              .selectResult(result),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Ink(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? const Color(0xFF1C4F7A)
+                                  : const Color(0xFFEAF1F8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  result.title,
+                                  style: TextStyle(
+                                    color: active
+                                        ? Colors.white
+                                        : const Color(0xFF17324D),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (result.totalTravelMinutes != null) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${result.totalTravelMinutes} хв',
+                                    style: TextStyle(
+                                      color: active
+                                          ? Colors.white.withValues(alpha: 0.86)
+                                          : const Color(0xFF1C4F7A),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                if (state.failure != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    state.failure!.message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoutePointChip extends StatelessWidget {
+  const _RoutePointChip({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF1F8),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF1C4F7A),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF17324D),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransportMiniToggle extends StatelessWidget {
+  const _TransportMiniToggle({
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Ink(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1C4F7A) : const Color(0xFFEAF1F8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: selected ? Colors.white : const Color(0xFF1C4F7A),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundActionButton extends StatelessWidget {
+  const _RoundActionButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C4F7A).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: const Color(0xFF1C4F7A)),
+      ),
     );
   }
 }
@@ -316,114 +754,124 @@ class _RoutesSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             child: BlocBuilder<MapRoutesCubit, MapRoutesState>(
               builder: (context, state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFB8B4A8),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+                return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+                  builder: (context, languageState) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEAF1F8),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            _transportTypeIcon(transportType),
-                            color: const Color(0xFF1C4F7A),
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _transportTypeLabel(transportType),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF17324D),
+                        Center(
+                          child: Container(
+                            width: 42,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB8B4A8),
+                              borderRadius: BorderRadius.circular(999),
                             ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(
-                            Icons.close,
-                            color: Color(0xFFD64545),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF1F8),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(
+                                _transportTypeIcon(transportType),
+                                color: const Color(0xFF1C4F7A),
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _transportTypeLabel(transportType),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF17324D),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(
+                                Icons.close,
+                                color: Color(0xFFD64545),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (state.isLoading && state.availableRoutes.isEmpty)
+                          const LinearProgressIndicator(),
+                        if (state.selectedRoutes.isNotEmpty) ...[
+                          Text(
+                            'Вибрані: ${state.selectedRoutes.map((route) => route.displayShortName(languageState.language)).join(', ')}',
+                            style: const TextStyle(
+                              color: Color(0xFF17324D),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        Expanded(
+                          child: GridView.builder(
+                            itemCount: state.availableRoutes.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 4,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  childAspectRatio: 1.6,
+                                ),
+                            itemBuilder: (context, index) {
+                              final route = state.availableRoutes[index];
+                              final selected = state.selectedRoutes.contains(
+                                route,
+                              );
+                              return InkWell(
+                                onTap: () => onRouteTap(route),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Ink(
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? const Color(0xFF1C4F7A)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: selected
+                                          ? const Color(0xFF1C4F7A)
+                                          : Colors.black.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      route.displayShortName(
+                                        languageState.language,
+                                      ),
+                                      style: TextStyle(
+                                        color: selected
+                                            ? Colors.white
+                                            : const Color(0xFF17324D),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (state.isLoading && state.availableRoutes.isEmpty)
-                      const LinearProgressIndicator(),
-                    if (state.selectedRoutes.isNotEmpty) ...[
-                      Text(
-                        'Вибрані: ${state.selectedRoutes.map((route) => route.shortName).join(', ')}',
-                        style: const TextStyle(
-                          color: Color(0xFF17324D),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    Expanded(
-                      child: GridView.builder(
-                        itemCount: state.availableRoutes.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: 1.6,
-                            ),
-                        itemBuilder: (context, index) {
-                          final route = state.availableRoutes[index];
-                          final selected = state.selectedRoutes.contains(route);
-                          return InkWell(
-                            onTap: () => onRouteTap(route),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Ink(
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? const Color(0xFF1C4F7A)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: selected
-                                      ? const Color(0xFF1C4F7A)
-                                      : Colors.black.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  route.shortName,
-                                  style: TextStyle(
-                                    color: selected
-                                        ? Colors.white
-                                        : const Color(0xFF17324D),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 );
               },
             ),
@@ -456,139 +904,147 @@ class _StopsSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             child: BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
               builder: (context, state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFB8B4A8),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Зупинки маршруту № ${route.shortName}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF17324D),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(
-                            Icons.close,
-                            color: Color(0xFFD64545),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Натисніть на назву зупинки, щоб відкрити час прибуття транспорту',
-                      style: TextStyle(
-                        color: Color(0xFFD48A2B),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (state.isLoading && state.routeZones.isEmpty)
-                      const Expanded(
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: state.routeZones.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final zone = state.routeZones[index];
-                            return InkWell(
-                              onTap: () => onZoneTap(zone.id, zone.name),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Ink(
-                                padding: const EdgeInsets.all(10),
+                return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+                  builder: (context, languageState) {
+                    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+                      builder: (context, routesState) {
+                        final visibleZones = state.routeZones
+                            .where(
+                              (zone) => _matchesStatus(
+                                zone.status,
+                                routesState.selectedStatus.statusValue,
+                              ),
+                            )
+                            .toList(growable: false);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 42,
+                                height: 4,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 34,
-                                      height: 34,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1C4F7A),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        zone.name,
-                                        style: const TextStyle(
-                                          color: Color(0xFF17324D),
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  color: const Color(0xFFB8B4A8),
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Зупинки маршруту № ${route.displayShortName(languageState.language)}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF17324D),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Color(0xFFD64545),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Натисніть на назву зупинки, щоб відкрити час прибуття транспорту',
+                              style: TextStyle(
+                                color: Color(0xFFD48A2B),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (state.isLoading && state.routeZones.isEmpty)
+                              const Expanded(
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else
+                              Expanded(
+                                child: ListView.separated(
+                                  itemCount: visibleZones.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(height: 8),
+                                  itemBuilder: (context, index) {
+                                    final zone = visibleZones[index];
+                                    return InkWell(
+                                      onTap: () => onZoneTap(
+                                        zone.id,
+                                        zone.displayName(
+                                          languageState.language,
+                                        ),
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Ink(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 34,
+                                              height: 34,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF1C4F7A),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                '${index + 1}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                zone.displayName(
+                                                  languageState.language,
+                                                ),
+                                                style: const TextStyle(
+                                                  color: Color(0xFF17324D),
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ArrivalOverlayCard extends StatelessWidget {
-  const _ArrivalOverlayCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
-      builder: (context, state) {
-        if (state.arrivalInfo == null) {
-          return const SizedBox.shrink();
-        }
-        return Align(
-          alignment: Alignment.topLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 340),
-            child: const ArrivalInfoPanel(),
-          ),
-        );
-      },
     );
   }
 }
@@ -653,7 +1109,9 @@ class _MarkersMenu extends StatelessWidget {
 }
 
 class _LocationControl extends StatelessWidget {
-  const _LocationControl();
+  const _LocationControl({required this.mapController});
+
+  final MapController mapController;
 
   @override
   Widget build(BuildContext context) {
@@ -670,34 +1128,91 @@ class _LocationControl extends StatelessWidget {
             ),
           ],
         );
-        if (state.isLoading) {
-          return DecoratedBox(
-            decoration: decoration.copyWith(color: const Color(0xFF466B8C)),
-            child: const SizedBox(
-              width: 52,
-              height: 52,
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
         return DecoratedBox(
           decoration: decoration,
-          child: IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.my_location, color: Colors.white),
-            tooltip: 'Моє місце',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MapControlButton(
+                  icon: Icons.add,
+                  tooltip: 'Збільшити масштаб',
+                  onPressed: () {
+                    mapController.zoomBy(1);
+                  },
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+                _MapControlButton(
+                  icon: Icons.remove,
+                  tooltip: 'Зменшити масштаб',
+                  onPressed: () {
+                    mapController.zoomBy(-1);
+                  },
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: state.isLoading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : IconButton(
+                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.my_location,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'Моє місце',
+                        ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+class _MapControlButton extends StatelessWidget {
+  const _MapControlButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white),
+        tooltip: tooltip,
+        splashRadius: 24,
+      ),
     );
   }
 }
@@ -851,8 +1366,10 @@ class _BottomMapActions extends StatelessWidget {
               if (state.activeMapActionLabel != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.96),
                     borderRadius: BorderRadius.circular(14),
@@ -887,9 +1404,9 @@ class _BottomMapActions extends StatelessWidget {
                           context.read<MainMapCubit>().setActiveMapActionLabel(
                             'Режим маршрутів',
                           );
-                          context
-                              .read<MainMapCubit>()
-                              .setRouteMode(MainMapMode.routes);
+                          context.read<MainMapCubit>().setRouteMode(
+                            MainMapMode.routes,
+                          );
                           context.read<MainMapCubit>().selectTab(
                             MainMapTab.search,
                           );
@@ -901,11 +1418,14 @@ class _BottomMapActions extends StatelessWidget {
                       IconButton(
                         onPressed: () {
                           context.read<RoutePreviewCubit>().clear();
-                          context
-                              .read<MainMapCubit>()
-                              .setActiveMapActionLabel('Preview очищено');
+                          context.read<MainMapCubit>().setActiveMapActionLabel(
+                            'Preview очищено',
+                          );
                         },
-                        icon: const Icon(Icons.layers_clear, color: Colors.white),
+                        icon: const Icon(
+                          Icons.layers_clear,
+                          color: Colors.white,
+                        ),
                         tooltip: 'Очистити preview',
                       ),
                     ],

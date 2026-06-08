@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/flutter_map_controller_adapter.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
+import 'package:flutter_dozor_city/core/map/map_zoom_thresholds.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_marker_widget.dart';
@@ -20,11 +22,16 @@ class FlutterMapSurface extends StatefulWidget {
     required this.vehicles,
     required this.selectedRoutesCount,
     required this.routeColorsById,
+    required this.showMarkers,
+    this.cityStops = const [],
     this.onVehicleTap,
+    this.onCityStopTap,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
     this.previewEnd,
+    this.selectedRouteStatus,
+    this.onMapTap,
     this.onCameraIdle,
   });
 
@@ -32,11 +39,16 @@ class FlutterMapSurface extends StatefulWidget {
   final List<AnimatedVehicle> vehicles;
   final int selectedRoutesCount;
   final Map<String, int> routeColorsById;
+  final bool showMarkers;
+  final List<RouteZone> cityStops;
   final ValueChanged<Vehicle>? onVehicleTap;
+  final Future<void> Function(RouteZone)? onCityStopTap;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
   final SelectedPoint? previewEnd;
+  final int? selectedRouteStatus;
+  final ValueChanged<AppLatLng>? onMapTap;
   final VoidCallback? onCameraIdle;
 
   @override
@@ -112,12 +124,20 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
                 zoom: position.zoom,
               ),
             );
+            setState(() {});
           },
           onMapEvent: (event) {
             if (event is MapEventMoveEnd) {
               widget.onCameraIdle?.call();
             }
           },
+          onTap: widget.onMapTap == null
+              ? null
+              : (tapPosition, point) {
+                  widget.onMapTap!(
+                    AppLatLng(lat: point.latitude, lng: point.longitude),
+                  );
+                },
         ),
         children: [
           TileLayer(
@@ -132,25 +152,68 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
   }
 
   List<Marker> _buildMarkers() {
-    final markers = widget.vehicles.map((animatedVehicle) {
-      final vehicle = animatedVehicle.vehicleAt(_frameNow);
-      return Marker(
-        point: ll.LatLng(vehicle.lat, vehicle.lng),
-        width: 30,
-        height: 30,
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: widget.onVehicleTap == null
-              ? null
-              : () => widget.onVehicleTap!(vehicle),
-          child: VehicleMarkerWidget(
-            vehicle: vehicle,
-            selectedRoutesCount: widget.selectedRoutesCount,
-            routeColorValue: widget.routeColorsById[vehicle.routeId],
-          ),
-        ),
+    final markers = <Marker>[];
+    final showCityStops =
+        widget.showMarkers &&
+        widget.mapController.camera.zoom >= kCityStopsZoomThreshold;
+    if (showCityStops) {
+      markers.addAll(
+        widget.cityStops
+            .where((stop) => stop.position != null)
+            .map(
+              (stop) => Marker(
+                point: ll.LatLng(stop.position!.lat, stop.position!.lng),
+                width: 24,
+                height: 24,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: widget.onCityStopTap == null
+                      ? null
+                      : () {
+                          unawaited(widget.onCityStopTap!(stop));
+                        },
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F5B8D),
+                      border: Border.all(color: Colors.white, width: 2),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.directions_bus_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
       );
-    }).toList();
+    }
+    if (widget.showMarkers) {
+      markers.addAll(
+        widget.vehicles.map((animatedVehicle) {
+          final vehicle = animatedVehicle.vehicleAt(_frameNow);
+          return Marker(
+            point: ll.LatLng(vehicle.lat, vehicle.lng),
+            width: 30,
+            height: 30,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: widget.onVehicleTap == null
+                  ? null
+                  : () => widget.onVehicleTap!(vehicle),
+              child: VehicleMarkerWidget(
+                vehicle: vehicle,
+                selectedRoutesCount: widget.selectedRoutesCount,
+                routeColorValue: widget.routeColorsById[vehicle.routeId],
+              ),
+            ),
+          );
+        }),
+      );
+    }
 
     final start = widget.previewStart;
     if (start != null) {
@@ -182,7 +245,8 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
   List<Polyline> _buildPolylines() {
     final polylines = widget.routePolylines
         .expand(
-          (route) => route.polylineSegments
+          (route) => route
+              .displayPolylineSegments(widget.selectedRouteStatus)
               .where((segment) => segment.length > 1)
               .map(
                 (segment) => Polyline(

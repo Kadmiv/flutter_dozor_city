@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_status_filter.dart';
 import 'package:flutter_dozor_city/core/map/app_map_surface.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
@@ -16,8 +19,12 @@ class RoutePreviewMapLayer extends StatelessWidget {
     required this.vehicles,
     required this.selectedRoutesCount,
     required this.routeColorsById,
+    required this.showMarkers,
+    this.cityStops = const [],
     this.onVehicleTap,
+    this.onCityStopTap,
     required this.onCameraIdle,
+    this.onMapTap,
     this.routePolylines = const [],
   });
 
@@ -25,8 +32,12 @@ class RoutePreviewMapLayer extends StatelessWidget {
   final List<AnimatedVehicle> vehicles;
   final int selectedRoutesCount;
   final Map<String, int> routeColorsById;
+  final bool showMarkers;
+  final List<RouteZone> cityStops;
   final ValueChanged<Vehicle>? onVehicleTap;
+  final Future<void> Function(RouteZone)? onCityStopTap;
   final VoidCallback onCameraIdle;
+  final ValueChanged<AppLatLng>? onMapTap;
   final List<TransportRoute> routePolylines;
 
   @override
@@ -47,12 +58,18 @@ class RoutePreviewMapLayer extends StatelessWidget {
                   vehicles: vehicles,
                   selectedRoutesCount: selectedRoutesCount,
                   routeColorsById: routeColorsById,
+                  showMarkers: showMarkers,
+                  cityStops: cityStops,
                   onVehicleTap: onVehicleTap,
+                  onCityStopTap: onCityStopTap,
                   routePolylines: routesToDraw,
                   previewGeometry:
                       previewState.route?.previewGeometry ?? const [],
                   previewStart: previewState.start,
                   previewEnd: previewState.end,
+                  selectedRouteStatus:
+                      mapRoutesState.selectedStatus.statusValue,
+                  onMapTap: onMapTap,
                   onCameraIdle: onCameraIdle,
                 );
               },

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_status_filter.dart';
 import 'package:flutter_dozor_city/core/error/failures.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_routes_by_type_use_case.dart';
@@ -10,6 +11,7 @@ class MapRoutesState {
     this.transportType = 0,
     this.availableRoutes = const [],
     this.selectedRoutes = const [],
+    this.selectedStatus = RouteStatusFilter.all,
     this.activeCityId,
     this.activeRouteId,
     this.isLoading = false,
@@ -19,6 +21,7 @@ class MapRoutesState {
   final int transportType;
   final List<TransportRoute> availableRoutes;
   final List<TransportRoute> selectedRoutes;
+  final RouteStatusFilter selectedStatus;
   final String? activeCityId;
   final String? activeRouteId;
   final bool isLoading;
@@ -28,6 +31,7 @@ class MapRoutesState {
     int? transportType,
     List<TransportRoute>? availableRoutes,
     List<TransportRoute>? selectedRoutes,
+    RouteStatusFilter? selectedStatus,
     String? activeCityId,
     String? activeRouteId,
     bool? isLoading,
@@ -40,10 +44,19 @@ class MapRoutesState {
   }) {
     return MapRoutesState(
       transportType: transportType ?? this.transportType,
-      availableRoutes: clearAvailableRoutes ? const [] : (availableRoutes ?? this.availableRoutes),
-      selectedRoutes: clearSelectedRoutes ? const [] : (selectedRoutes ?? this.selectedRoutes),
-      activeCityId: clearActiveCityId ? null : (activeCityId ?? this.activeCityId),
-      activeRouteId: clearActiveRouteId ? null : (activeRouteId ?? this.activeRouteId),
+      availableRoutes: clearAvailableRoutes
+          ? const []
+          : (availableRoutes ?? this.availableRoutes),
+      selectedRoutes: clearSelectedRoutes
+          ? const []
+          : (selectedRoutes ?? this.selectedRoutes),
+      selectedStatus: selectedStatus ?? this.selectedStatus,
+      activeCityId: clearActiveCityId
+          ? null
+          : (activeCityId ?? this.activeCityId),
+      activeRouteId: clearActiveRouteId
+          ? null
+          : (activeRouteId ?? this.activeRouteId),
       isLoading: isLoading ?? this.isLoading,
       failure: clearFailure ? null : (failure ?? this.failure),
     );
@@ -55,10 +68,10 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
     required GetRoutesByTypeUseCase getRoutesByTypeUseCase,
     required GetSelectedMapRoutesUseCase getSelectedMapRoutesUseCase,
     required SaveSelectedMapRoutesUseCase saveSelectedMapRoutesUseCase,
-  })  : _getRoutesByTypeUseCase = getRoutesByTypeUseCase,
-        _getSelectedMapRoutesUseCase = getSelectedMapRoutesUseCase,
-        _saveSelectedMapRoutesUseCase = saveSelectedMapRoutesUseCase,
-        super(const MapRoutesState());
+  }) : _getRoutesByTypeUseCase = getRoutesByTypeUseCase,
+       _getSelectedMapRoutesUseCase = getSelectedMapRoutesUseCase,
+       _saveSelectedMapRoutesUseCase = saveSelectedMapRoutesUseCase,
+       super(const MapRoutesState());
 
   final GetRoutesByTypeUseCase _getRoutesByTypeUseCase;
   final GetSelectedMapRoutesUseCase _getSelectedMapRoutesUseCase;
@@ -66,13 +79,18 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
 
   Future<void> restoreForCity(String cityId) async {
     final selectedMapRoutes = await _getSelectedMapRoutesUseCase(cityId);
-    final transportType = selectedMapRoutes?.transportType ?? state.transportType;
+    final transportType =
+        selectedMapRoutes?.transportType ?? state.transportType;
     await _loadRoutes(
       cityId: cityId,
       transportType: transportType,
       selectedRouteIds: selectedMapRoutes?.selectedRouteIds ?? const [],
       activeRouteId: selectedMapRoutes?.activeRouteId,
     );
+  }
+
+  void setStatusFilter(RouteStatusFilter statusFilter) {
+    emit(state.copyWith(selectedStatus: statusFilter));
   }
 
   Future<void> selectTransportType({
@@ -85,7 +103,9 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       cityId: cityId,
       transportType: type,
       selectedRouteIds: keepCurrentSelection
-          ? state.selectedRoutes.map((route) => route.id).toList(growable: false)
+          ? state.selectedRoutes
+                .map((route) => route.id)
+                .toList(growable: false)
           : const [],
       activeRouteId: keepCurrentSelection ? state.activeRouteId : null,
     );
@@ -111,7 +131,9 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       state.copyWith(
         activeCityId: cityId,
         activeRouteId: route.id,
-        selectedRoutes: isSelected ? state.selectedRoutes : [...state.selectedRoutes, route],
+        selectedRoutes: isSelected
+            ? state.selectedRoutes
+            : [...state.selectedRoutes, route],
       ),
     );
     await _persistSelection();
@@ -126,12 +148,7 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       return;
     }
 
-    emit(
-      state.copyWith(
-        activeCityId: cityId,
-        activeRouteId: route.id,
-      ),
-    );
+    emit(state.copyWith(activeCityId: cityId, activeRouteId: route.id));
     await _persistSelection();
   }
 
@@ -154,7 +171,10 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
           clearActiveRouteId: true,
         ),
       );
-      await _persistSelection(selectedRoutes: remainingRoutes, activeRouteId: null);
+      await _persistSelection(
+        selectedRoutes: remainingRoutes,
+        activeRouteId: null,
+      );
       return;
     }
 
@@ -203,8 +223,8 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       final resolvedActiveRouteId = selectedRoutes.isEmpty
           ? null
           : (selectedRoutes.any((route) => route.id == activeRouteId)
-              ? activeRouteId
-              : selectedRoutes.last.id);
+                ? activeRouteId
+                : selectedRoutes.last.id);
       emit(
         state.copyWith(
           transportType: transportType,
@@ -217,7 +237,9 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
     } on AppFailure catch (e) {
       emit(state.copyWith(isLoading: false, failure: e));
     } catch (e) {
-      emit(state.copyWith(isLoading: false, failure: ParseFailure(e.toString())));
+      emit(
+        state.copyWith(isLoading: false, failure: ParseFailure(e.toString())),
+      );
     }
   }
 
@@ -234,7 +256,9 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       cityId,
       SelectedMapRoutes(
         transportType: state.transportType,
-        selectedRouteIds: routes.map((route) => route.id).toList(growable: false),
+        selectedRouteIds: routes
+            .map((route) => route.id)
+            .toList(growable: false),
         activeRouteId: activeRouteId ?? state.activeRouteId,
       ),
     );

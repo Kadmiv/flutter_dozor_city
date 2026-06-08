@@ -45,6 +45,17 @@ class FlutterMapControllerAdapter implements MapController {
   }
 
   @override
+  Future<void> zoomBy(double delta) async {
+    await setCamera(
+      AppMapCamera(
+        centerLat: camera.centerLat,
+        centerLng: camera.centerLng,
+        zoom: (camera.zoom + delta).clamp(1.0, 20.0).toDouble(),
+      ),
+    );
+  }
+
+  @override
   Future<void> setMarkers(List<MapMarkerData> markers) async {
     _markers = markers;
   }

@@ -4,4 +4,5 @@ abstract final class BatumiApiPaths {
   static const getDbData = '/api/getDbData';
   static const getPointsBetweenStations = '/api/getPointsBetweenStations';
   static const getBusLocsOnRoute = '/api/getBusLocsOnRoute';
+  static const getLiveData = '/api/getLiveData';
 }

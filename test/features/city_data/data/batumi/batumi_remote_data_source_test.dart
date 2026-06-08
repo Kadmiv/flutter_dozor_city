@@ -5,10 +5,15 @@ import 'package:flutter_dozor_city/core/network/request/app_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_bus_location_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_city_catalog.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_db_data_dto.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_live_data_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_points_between_stations_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/batumi_remote_data_source.dart';
 
 class _FakeBatumiDioClient extends DioClient {
+  _FakeBatumiDioClient({this.failLiveRoutes = const <String>{}});
+
+  final Set<String> failLiveRoutes;
+
   @override
   Future<Response<dynamic>> request(AppRequest request) async {
     if (request.path == '/api/getDbData') {
@@ -26,6 +31,20 @@ class _FakeBatumiDioClient extends DioClient {
     if (request.path == '/api/getBusLocsOnRoute') {
       final routeId = '${request.queryParameters?['routeId'] ?? ''}';
       final response = _liveResponses[routeId];
+      return Response<dynamic>(
+        requestOptions: RequestOptions(path: request.path),
+        data: response ?? <String, dynamic>{'data': <Map<String, dynamic>>[]},
+      );
+    }
+    if (request.path == '/api/getLiveData') {
+      final routeId = '${request.queryParameters?['routeId'] ?? ''}';
+      if (failLiveRoutes.contains(routeId)) {
+        throw DioException(
+          requestOptions: RequestOptions(path: request.path),
+          message: 'Live data failure for $routeId',
+        );
+      }
+      final response = _liveDataResponses[routeId];
       return Response<dynamic>(
         requestOptions: RequestOptions(path: request.path),
         data: response ?? <String, dynamic>{'data': <Map<String, dynamic>>[]},
@@ -152,6 +171,53 @@ class _FakeBatumiDioClient extends DioClient {
       ],
     },
   };
+
+  static const Map<String, Map<String, dynamic>> _liveDataResponses = {
+    'route-1': {
+      'data': {
+        'arrivalTime': [
+          {
+            'arrival_times': {
+              'first_bus': {
+                'bus_id': '6724aa47d2c2645e78ae6767',
+                'bus_name': 'TT 683 ET',
+                'minute': 2,
+              },
+              'second_bus': {
+                'bus_id': '6724aa47d2c2645e78ae6781',
+                'bus_name': 'TT 689 ET',
+                'minute': 13,
+              },
+            },
+            'name': '1089 თბილისის მოედანი',
+            'stop_id': 'stop-1',
+          },
+        ],
+      },
+    },
+    'route-2': {
+      'data': {
+        'arrivalTime': [
+          {
+            'arrival_times': {
+              'first_bus': {
+                'bus_id': '6724aa47d2c2645e78ae6767',
+                'bus_name': 'TT 683 ET',
+                'minute': 1,
+              },
+              'second_bus': {
+                'bus_id': '6724aa47d2c2645e78ae6781',
+                'bus_name': 'TT 689 ET',
+                'minute': 12,
+              },
+            },
+            'name': '1089 თბილისის მოედანი',
+            'stop_id': 'stop-1',
+          },
+        ],
+      },
+    },
+  };
 }
 
 void main() {
@@ -166,6 +232,9 @@ void main() {
       final live = BatumiBusLocationsResponseDto.fromJson(
         _FakeBatumiDioClient._liveResponses['route-1']!,
       );
+      final liveData = BatumiLiveDataResponseDto.fromApiResponse(
+        _FakeBatumiDioClient._liveDataResponses['route-1'],
+      );
 
       expect(db.routesNames.length, 2);
       expect(db.busStops.length, 2);
@@ -175,6 +244,16 @@ void main() {
         live.locations.map((location) => location.name),
         containsAll(['BAT-1', 'BAT-OFF']),
       );
+      expect(liveData.arrivalTimes.single.stopId, 'stop-1');
+      expect(liveData.arrivalTimes.single.arrivalTimes, hasLength(2));
+    });
+
+    test('handles missing arrivalTime list', () {
+      final liveData = BatumiLiveDataResponseDto.fromApiResponse(const {
+        'data': {},
+      });
+
+      expect(liveData.arrivalTimes, isEmpty);
     });
   });
 
@@ -222,7 +301,24 @@ void main() {
         zoneId: 'stop-1',
       );
       expect(arrival.zoneId, 'stop-1');
-      expect(arrival.busMinutes, isEmpty);
+      expect(arrival.busMinutes, [1, 2, 12, 13]);
+      expect(arrival.routeArrivals, hasLength(4));
+      expect(arrival.routeArrivals.first.minute, 1);
+      expect(arrival.routeArrivals.first.busName, 'TT 683 ET');
+    });
+
+    test('keeps successful route arrivals when one route fails', () async {
+      final remote = BatumiRemoteDataSource(
+        _FakeBatumiDioClient(failLiveRoutes: const {'route-2'}),
+      );
+
+      final arrival = await remote.getArrivalByZone(
+        cityId: BatumiCityCatalog.cityId,
+        zoneId: 'stop-1',
+      );
+
+      expect(arrival.routeArrivals, hasLength(2));
+      expect(arrival.busMinutes, [2, 13]);
     });
   });
 }

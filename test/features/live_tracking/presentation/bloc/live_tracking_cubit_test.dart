@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
@@ -114,6 +115,16 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [
+    RouteZone(
+      id: 'stop-1',
+      routeId: 'route-1',
+      name: 'Зупинка 1',
+      position: AppLatLng(lat: 50.25, lng: 28.66),
+    ),
+  ];
 
   @override
   Future<void> preloadCityData(String cityId) async {}

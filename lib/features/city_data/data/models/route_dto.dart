@@ -27,22 +27,33 @@ class RouteDto {
   final double price;
 
   factory RouteDto.fromJson(Map<String, Object?> json) {
-    final rawNames = _stringList(json['nm']) ?? _stringList(json['name']) ?? const [];
-    final rawLines = _objectList(json['lns']) ?? _objectList(json['lines']) ?? const [];
-    final rawZones = _objectList(json['zns']) ?? _objectList(json['zones']) ?? const [];
+    final rawNames =
+        _stringList(json['nm']) ?? _stringList(json['name']) ?? const [];
+    final rawLines =
+        _objectList(json['lns']) ?? _objectList(json['lines']) ?? const [];
+    final rawZones =
+        _objectList(json['zns']) ?? _objectList(json['zones']) ?? const [];
     return RouteDto(
       id: _int(json['id']),
       names: rawNames,
-      shortName: _string(json['sNm']).isNotEmpty ? _string(json['sNm']) : _string(json['shortName']),
-      info: _string(json['inf']).isNotEmpty ? _string(json['inf']) : _string(json['info']),
-      transportType: json['transportType'] == null ? null : _int(json['transportType']),
+      shortName: _string(json['sNm']).isNotEmpty
+          ? _string(json['sNm'])
+          : _string(json['shortName']),
+      info: _string(json['inf']).isNotEmpty
+          ? _string(json['inf'])
+          : _string(json['info']),
+      transportType: json['transportType'] == null
+          ? null
+          : _int(json['transportType']),
       lines: rawLines
           .map((item) => RouteLineDto.fromJson(item))
           .toList(growable: false),
       zones: rawZones
           .map((item) => RouteZoneShapeDto.fromJson(item))
           .toList(growable: false),
-      outLineColor: _string(json['oLC']).isNotEmpty ? _string(json['oLC']) : _string(json['outLineColor']),
+      outLineColor: _string(json['oLC']).isNotEmpty
+          ? _string(json['oLC'])
+          : _string(json['outLineColor']),
       price: _double(json['prc'] ?? json['price']),
     );
   }
@@ -56,8 +67,9 @@ class RouteDto {
         )
         .where((segment) => segment.length > 1)
         .toList(growable: false);
-    final routeTitle =
-        names.length > 1 ? names[1] : names.firstOrNull ?? 'Route $id';
+    final routeTitle = names.length > 1
+        ? names[1]
+        : names.firstOrNull ?? 'Route $id';
     final displayColorValue = RouteDisplayColor.fromRouteIdentity(
       shortName: shortName,
       title: routeTitle,
@@ -67,6 +79,9 @@ class RouteDto {
       shortName: shortName,
       title: routeTitle,
       transportType: transportType,
+      shortNameEn: shortName,
+      titleKa: names.length > 1 ? names[0] : routeTitle,
+      titleEn: routeTitle,
       polylineSegments: polylineSegments,
       lineColorValue: displayColorValue,
     );
@@ -77,7 +92,10 @@ typedef JsonRouteModel = RouteDto;
 
 List<String>? _stringList(Object? raw) {
   if (raw is List) {
-    return raw.map((item) => '$item').where((item) => item.isNotEmpty).toList(growable: false);
+    return raw
+        .map((item) => '$item')
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
   }
   return null;
 }

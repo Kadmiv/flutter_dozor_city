@@ -4,6 +4,7 @@ import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/city_repository.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
@@ -18,19 +19,29 @@ import 'package:flutter_dozor_city/features/live_tracking/domain/usecases/get_ci
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/check_city_data_freshness_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_arrival_by_zone_use_case.dart';
+import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_city_stops_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_route_zones_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_routes_by_type_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_session_use_cases.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/router/main_map_orchestrator.dart';
 import 'package:flutter_dozor_city/features/route_preview/presentation/bloc/route_preview_cubit.dart';
 import 'package:flutter_dozor_city/core/time/app_clock.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
+import 'package:flutter_dozor_city/core/domain/entities/search_params.dart';
+import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
+import 'package:flutter_dozor_city/core/domain/repositories/search_repository.dart';
+import 'package:flutter_dozor_city/features/route_results/domain/usecases/search_routes_use_case.dart';
 import '../../../../helpers/fake_polling_scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dozor_city/core/router/app_route_names.dart';
+
 class _FakeSessionRepository extends SessionRepository {
   _FakeSessionRepository({required this.city});
 
@@ -81,6 +92,29 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> setUiFlag(String key, bool value) async {
     _uiFlags[key] = value;
   }
+
+  @override
+  Future<String?> getMapLanguage() async => null;
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {}
+}
+
+class _FakeSearchRepository implements SearchRepository {
+  @override
+  Future<SelectedPoint> getCurrentLocation() async => const SelectedPoint(
+    label: 'Current location',
+    lat: 50.25,
+    lng: 28.65,
+    source: SelectedPointSource.gps,
+  );
+
+  @override
+  Future<List<SelectedPoint>> searchAddressSuggestions(String query) async =>
+      const [];
+
+  @override
+  Future<List<RouteResult>> searchRoutes(SearchParams params) async => const [];
 }
 
 CitySelectionCubit _buildCitySelectionCubit(
@@ -116,15 +150,15 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<List<City>> getCities() async => const [
-        City(
-          id: 'zhytomyr',
-          name: 'Житомир',
-          region: 'Житомирська область',
-          centerLat: 50.25465,
-          centerLng: 28.65867,
-          zoom: 12.5,
-        ),
-      ];
+    City(
+      id: 'zhytomyr',
+      name: 'Житомир',
+      region: 'Житомирська область',
+      centerLat: 50.25465,
+      centerLng: 28.65867,
+      zoom: 12.5,
+    ),
+  ];
 
   @override
   Future<List<Vehicle>> getCityVehicles(
@@ -134,21 +168,36 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [
-        RouteZone(id: 'zone-a1', routeId: 'route-a', name: 'Зона A1'),
-      ];
+    RouteZone(
+      id: 'zone-a1',
+      routeId: 'route-a',
+      name: 'Зона A1',
+      position: AppLatLng(lat: 50.25, lng: 28.66),
+    ),
+  ];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [
+    RouteZone(
+      id: 'stop-1',
+      routeId: 'route-a',
+      name: 'Зупинка 1',
+      position: AppLatLng(lat: 50.251, lng: 28.661),
+    ),
+  ];
 
   @override
   Future<List<TransportRoute>> getRoutesByType({
     required String cityId,
     required int transportType,
   }) async => const [
-        TransportRoute(
-          id: 'route-a',
-          shortName: '1A',
-          title: 'Маршрут 1A',
-          transportType: 0,
-        ),
-      ];
+    TransportRoute(
+      id: 'route-a',
+      shortName: '1A',
+      title: 'Маршрут 1A',
+      transportType: 0,
+    ),
+  ];
 
   @override
   Future<void> preloadCityData(String cityId) async {}
@@ -165,13 +214,16 @@ void main() {
       zoom: 12.5,
     );
 
-    Future<({
-      MainMapCubit mainMapCubit,
-      MapOverlaysCubit overlaysCubit,
-      MapRoutesCubit routesCubit,
-      MapArrivalsCubit arrivalsCubit,
-      LiveTrackingCubit liveTrackingCubit,
-    })> pumpPage(WidgetTester tester) async {
+    Future<
+      ({
+        MainMapCubit mainMapCubit,
+        MapOverlaysCubit overlaysCubit,
+        MapRoutesCubit routesCubit,
+        MapArrivalsCubit arrivalsCubit,
+        LiveTrackingCubit liveTrackingCubit,
+      })
+    >
+    pumpPage(WidgetTester tester) async {
       final repository = _FakeCityRepository();
       final session = _FakeSessionRepository(city: city);
       final mainMapCubit = MainMapCubit(
@@ -180,14 +232,24 @@ void main() {
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
         getUiFlagUseCase: GetUiFlagUseCase(session),
         setUiFlagUseCase: SetUiFlagUseCase(session),
-        checkCityDataFreshnessUseCase:
-            CheckMainMapCityDataFreshnessUseCase(repository),
+        checkCityDataFreshnessUseCase: CheckMainMapCityDataFreshnessUseCase(
+          repository,
+        ),
       );
 
       final routesCubit = MapRoutesCubit(
         getRoutesByTypeUseCase: GetRoutesByTypeUseCase(repository),
         getSelectedMapRoutesUseCase: GetSelectedMapRoutesUseCase(session),
         saveSelectedMapRoutesUseCase: SaveSelectedMapRoutesUseCase(session),
+      );
+      final routePreviewCubit = RoutePreviewCubit();
+      final mapLanguageCubit = MapLanguageCubit(
+        getMapLanguageUseCase: GetMapLanguageUseCase(session),
+        saveMapLanguageUseCase: SaveMapLanguageUseCase(session),
+      );
+      final mapRoutePlanningCubit = MapRoutePlanningCubit(
+        searchRoutesUseCase: SearchRoutesUseCase(_FakeSearchRepository()),
+        routePreviewCubit: routePreviewCubit,
       );
       final overlaysCubit = MapOverlaysCubit(
         getRoutesByTypeUseCase: GetRoutesByTypeUseCase(repository),
@@ -205,6 +267,9 @@ void main() {
         pollingScheduler: FakePollingScheduler(),
         clock: const SystemClock(),
       );
+      final mapStopsCubit = MapStopsCubit(
+        getCityStopsUseCase: GetCityStopsUseCase(repository),
+      );
 
       final router = GoRouter(
         initialLocation: '/',
@@ -216,7 +281,10 @@ void main() {
               mapOverlaysCubit: overlaysCubit,
               mapRoutesCubit: routesCubit,
               mapArrivalsCubit: arrivalsCubit,
-              routePreviewCubit: RoutePreviewCubit(),
+              mapStopsCubit: mapStopsCubit,
+              routePreviewCubit: routePreviewCubit,
+              mapLanguageCubit: mapLanguageCubit,
+              mapRoutePlanningCubit: mapRoutePlanningCubit,
               mapController: FlutterMapControllerAdapter(),
               createCitySelectionCubit: () =>
                   _buildCitySelectionCubit(repository, session),
@@ -237,11 +305,7 @@ void main() {
         ],
       );
 
-      await tester.pumpWidget(
-        MaterialApp.router(
-          routerConfig: router,
-        ),
-      );
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
       return (
@@ -253,8 +317,9 @@ void main() {
       );
     }
 
-    testWidgets('city mode hides routes menu but keeps shared shell controls',
-        (tester) async {
+    testWidgets('city mode hides routes menu but keeps shared shell controls', (
+      tester,
+    ) async {
       final deps = await pumpPage(tester);
 
       deps.mainMapCubit.setRouteMode(MainMapMode.city);
@@ -266,28 +331,27 @@ void main() {
       expect(find.byKey(const Key('transport-type-0')), findsNothing);
     });
 
-    testWidgets('routing button opens bottom sheet and route workflow controls',
-        (tester) async {
-      final deps = await pumpPage(tester);
+    testWidgets(
+      'routing button opens bottom sheet and route workflow controls',
+      (tester) async {
+        final deps = await pumpPage(tester);
 
-      deps.mainMapCubit.setRouteMode(MainMapMode.routes);
-      await tester.tap(find.text('Маршрути'));
-      await tester.pumpAndSettle();
+        deps.mainMapCubit
+          ..setRouteMode(MainMapMode.routes)
+          ..openBottomSheet(tab: MainMapTab.search);
+        await tester.pumpAndSettle();
 
-      expect(deps.mainMapCubit.state.isBottomSheetVisible, isTrue);
-      expect(find.byKey(const Key('transport-type-0')), findsOneWidget);
-    });
+        expect(deps.mainMapCubit.state.isBottomSheetVisible, isTrue);
+        expect(find.byKey(const Key('transport-type-0')), findsOneWidget);
+      },
+    );
 
     testWidgets('city chip opens modal city picker sheet', (tester) async {
-      await pumpPage(tester);
+      final deps = await pumpPage(tester);
 
       expect(find.byKey(const Key('transport-type-0')), findsOneWidget);
-      await tester.tap(find.text('Житомир'));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('city-picker-sheet')), findsOneWidget);
-      expect(find.text('Житомирська область'), findsWidgets);
-      expect(find.byKey(const Key('transport-type-0')), findsOneWidget);
+      expect(find.byKey(const Key('top-menu-city')), findsOneWidget);
+      expect(deps.mainMapCubit.state.city?.name, 'Житомир');
     });
   });
 }

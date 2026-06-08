@@ -22,6 +22,15 @@ class InMemoryMapController implements MapController {
   }
 
   @override
+  Future<void> zoomBy(double delta) async {
+    _camera = AppMapCamera(
+      centerLat: _camera.centerLat,
+      centerLng: _camera.centerLng,
+      zoom: (_camera.zoom + delta).clamp(1.0, 20.0).toDouble(),
+    );
+  }
+
+  @override
   Future<void> setMarkers(List<MapMarkerData> markers) async {
     _markers = markers;
   }

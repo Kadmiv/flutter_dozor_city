@@ -1,3 +1,4 @@
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 
 class RouteZoneDto {
@@ -15,15 +16,20 @@ class RouteZoneDto {
     return RouteZoneDto(
       id: _string(json['id']),
       routeId: _string(json['routeId']),
-      name: _string(json['name']).isNotEmpty ? _string(json['name']) : _string(json['nm']),
+      name: _string(json['name']).isNotEmpty
+          ? _string(json['name'])
+          : _string(json['nm']),
     );
   }
 
-  RouteZone toEntity() {
+  RouteZone toEntity({AppLatLng? position}) {
     return RouteZone(
       id: id,
       routeId: routeId,
       name: name,
+      nameEn: name,
+      nameKa: name,
+      position: position,
     );
   }
 }

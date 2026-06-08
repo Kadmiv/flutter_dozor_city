@@ -10,13 +10,16 @@ import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_api.dar
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_bus_location_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_city_catalog.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_db_data_dto.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_live_data_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_route_heading_resolver.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_points_between_stations_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_bus_locs_on_route_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_db_data_request.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_live_data_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_points_between_stations_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/city_remote_data_source.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_arrival.dart';
 
 class BatumiRemoteDataSource implements CityRemoteDataSource {
   BatumiRemoteDataSource(DioClient dioClient)
@@ -63,7 +66,7 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
   }) async {
     if (cityId != BatumiCityCatalog.cityId) {
       throw DioException(
-        requestOptions: RequestOptions(path: '/api/getBusLocsOnRoute'),
+        requestOptions: RequestOptions(path: '/api/getLiveData'),
         message: 'Unsupported Batumi city id: $cityId',
       );
     }
@@ -122,12 +125,29 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
             title: route.titleKa.trim().isNotEmpty
                 ? route.titleKa
                 : route.titleEn,
+            shortNameEn: route.shortName,
+            titleKa: route.titleKa,
+            titleEn: route.titleEn,
             transportType: 0,
             polylineSegments: _buildPolylineSegments(
               routeId: route.routeId,
               snapshot: snapshot,
               points: points,
             ),
+            polylineSegmentsByStatus: {
+              1: _buildPolylineSegments(
+                routeId: route.routeId,
+                snapshot: snapshot,
+                points: points,
+                status: 1,
+              ),
+              2: _buildPolylineSegments(
+                routeId: route.routeId,
+                snapshot: snapshot,
+                points: points,
+                status: 2,
+              ),
+            },
             lineColorValue: RouteDisplayColor.fromRouteIdentity(
               shortName: route.routeId,
               title: route.shortName,
@@ -155,6 +175,33 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
             id: stop.id,
             routeId: routeId,
             name: _preferredStopName(stop),
+            nameKa: stop.nameKa,
+            nameEn: stop.nameEn,
+            status: stop.routes[routeId]?.status,
+            position: AppLatLng(lat: stop.lat, lng: stop.lon),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async {
+    if (cityId != BatumiCityCatalog.cityId) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/api/getDbData'),
+        message: 'Unsupported Batumi city id: $cityId',
+      );
+    }
+    final snapshot = await _ensureSnapshotLoaded();
+    return snapshot.busStops.values
+        .map(
+          (stop) => RouteZone(
+            id: stop.id,
+            routeId: stop.routeTRouteIdGeoGps ?? '',
+            name: _preferredStopName(stop),
+            nameKa: stop.nameKa,
+            nameEn: stop.nameEn,
+            position: AppLatLng(lat: stop.lat, lng: stop.lon),
           ),
         )
         .toList(growable: false);
@@ -167,15 +214,124 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
   }) async {
     if (cityId != BatumiCityCatalog.cityId) {
       throw DioException(
-        requestOptions: RequestOptions(path: '/api/getBusLocsOnRoute'),
+        requestOptions: RequestOptions(path: '/api/getLiveData'),
         message: 'Unsupported Batumi city id: $cityId',
       );
     }
+    final snapshot = await _ensureSnapshotLoaded();
+    final stop = snapshot.busStops[zoneId];
+    if (stop == null) {
+      return ArrivalInfo(
+        zoneId: zoneId,
+        busMinutes: const [],
+        trolleyMinutes: const [],
+        tramMinutes: const [],
+      );
+    }
+
+    final routesById = snapshot.routesNames;
+    final routeIds = stop.routes.keys.toList(growable: false);
+    if (routeIds.isEmpty) {
+      return ArrivalInfo(
+        zoneId: zoneId,
+        busMinutes: const [],
+        trolleyMinutes: const [],
+        tramMinutes: const [],
+      );
+    }
+
+    final results = await Future.wait(
+      routeIds.map((routeId) async {
+        try {
+          final response = await _batumiApi.getLiveData(
+            GetBatumiLiveDataRequest(routeId: routeId),
+          );
+          final arrival = _findStopArrival(response, zoneId);
+          if (arrival == null) {
+            return _RouteArrivalLoadResult.success(const []);
+          }
+          final routeMeta = routesById[routeId];
+          final routeShortName = routeMeta?.shortName ?? routeId;
+          final sortOrder = routeMeta?.sortOrder ?? 0;
+          final arrivals =
+              arrival.arrivalTimes
+                  .map(
+                    (busArrival) => _BatumiRouteArrivalItem(
+                      arrival: RouteArrival(
+                        routeId: routeId,
+                        routeShortName: routeShortName,
+                        busId: busArrival.busId,
+                        busName: busArrival.busName,
+                        minute: busArrival.minute,
+                      ),
+                      routeSortOrder: sortOrder,
+                    ),
+                  )
+                  .toList(growable: false)
+                ..sort((left, right) {
+                  final minuteDiff = left.arrival.minute.compareTo(
+                    right.arrival.minute,
+                  );
+                  if (minuteDiff != 0) {
+                    return minuteDiff;
+                  }
+                  return left.arrival.busName.compareTo(right.arrival.busName);
+                });
+          return _RouteArrivalLoadResult.success(arrivals);
+        } on DioException catch (error) {
+          return _RouteArrivalLoadResult.failure(error);
+        }
+      }),
+    );
+
+    final routeArrivals = <_BatumiRouteArrivalItem>[];
+    DioException? lastError;
+    var hadSuccessfulRequest = false;
+    for (final result in results) {
+      if (result.error != null) {
+        lastError = result.error;
+        continue;
+      }
+      hadSuccessfulRequest = true;
+      routeArrivals.addAll(result.arrivals);
+    }
+
+    if (routeArrivals.isEmpty) {
+      if (!hadSuccessfulRequest && lastError != null) {
+        throw lastError;
+      }
+      return ArrivalInfo(
+        zoneId: zoneId,
+        busMinutes: const [],
+        trolleyMinutes: const [],
+        tramMinutes: const [],
+      );
+    }
+
+    routeArrivals.sort((left, right) {
+      final minuteDiff = left.arrival.minute.compareTo(right.arrival.minute);
+      if (minuteDiff != 0) {
+        return minuteDiff;
+      }
+      final orderDiff = left.routeSortOrder.compareTo(right.routeSortOrder);
+      if (orderDiff != 0) {
+        return orderDiff;
+      }
+      return left.arrival.busName.compareTo(right.arrival.busName);
+    });
+
+    final arrivals = routeArrivals
+        .map((item) => item.arrival)
+        .toList(growable: false);
+    final minutes = arrivals
+        .map((arrival) => arrival.minute)
+        .toList(growable: false);
     return ArrivalInfo(
       zoneId: zoneId,
-      busMinutes: const [],
+      busMinutes: minutes,
       trolleyMinutes: const [],
       tramMinutes: const [],
+      routeArrivals: arrivals,
     );
   }
 
@@ -219,11 +375,15 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
     required String routeId,
     required BatumiDbDataDto snapshot,
     required BatumiPointsBetweenStationsDto points,
+    int? status,
   }) {
-    final routePointsByStop = points.data[routeId];
     final routeStops =
         snapshot.busStops.values
             .where((stop) => stop.routes.containsKey(routeId))
+            .where(
+              (stop) =>
+                  status == null || stop.routes[routeId]?.status == status,
+            )
             .toList(growable: false)
           ..sort((a, b) {
             final left = a.routes[routeId]?.order ?? 0;
@@ -232,6 +392,7 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
           });
 
     final segments = <List<AppLatLng>>[];
+    final routePointsByStop = points.data[routeId];
     if (routePointsByStop != null) {
       for (final stop in routeStops) {
         final stopPoints = routePointsByStop[stop.id];
@@ -282,6 +443,7 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
       routeShortName: shortName,
       routeTitle: title,
       transportType: 0,
+      routeStatus: location.status,
       lat: location.lat,
       lng: location.lon,
       azimuth: points == null
@@ -341,4 +503,43 @@ class BatumiRemoteDataSource implements CityRemoteDataSource {
     }
     return hash;
   }
+
+  BatumiStopArrivalDto? _findStopArrival(
+    BatumiLiveDataResponseDto response,
+    String zoneId,
+  ) {
+    for (final arrival in response.arrivalTimes) {
+      if (arrival.stopId == zoneId) {
+        return arrival;
+      }
+    }
+    return null;
+  }
+}
+
+class _RouteArrivalLoadResult {
+  const _RouteArrivalLoadResult._({required this.arrivals, this.error});
+
+  factory _RouteArrivalLoadResult.success(
+    List<_BatumiRouteArrivalItem> arrivals,
+  ) {
+    return _RouteArrivalLoadResult._(arrivals: arrivals);
+  }
+
+  factory _RouteArrivalLoadResult.failure(DioException error) {
+    return _RouteArrivalLoadResult._(arrivals: const [], error: error);
+  }
+
+  final List<_BatumiRouteArrivalItem> arrivals;
+  final DioException? error;
+}
+
+class _BatumiRouteArrivalItem {
+  const _BatumiRouteArrivalItem({
+    required this.arrival,
+    required this.routeSortOrder,
+  });
+
+  final RouteArrival arrival;
+  final int routeSortOrder;
 }

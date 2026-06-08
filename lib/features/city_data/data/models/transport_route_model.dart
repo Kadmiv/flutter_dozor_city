@@ -6,12 +6,20 @@ class TransportRouteModel {
     required this.shortName,
     required this.title,
     required this.transportType,
+    this.shortNameKa,
+    this.shortNameEn,
+    this.titleKa,
+    this.titleEn,
   });
 
   final String id;
   final String shortName;
   final String title;
   final int transportType;
+  final String? shortNameKa;
+  final String? shortNameEn;
+  final String? titleKa;
+  final String? titleEn;
 
   factory TransportRouteModel.fromJson(Map<String, Object?> json) {
     return TransportRouteModel(
@@ -19,7 +27,9 @@ class TransportRouteModel {
       shortName: _string(json['shortName']).isNotEmpty
           ? _string(json['shortName'])
           : _string(json['sNm']),
-      title: _string(json['title']).isNotEmpty ? _string(json['title']) : _string(json['name']),
+      title: _string(json['title']).isNotEmpty
+          ? _string(json['title'])
+          : _string(json['name']),
       transportType: _int(json['transportType']),
     );
   }
@@ -30,6 +40,10 @@ class TransportRouteModel {
       shortName: shortName,
       title: title,
       transportType: transportType,
+      shortNameKa: shortNameKa,
+      shortNameEn: shortNameEn ?? shortName,
+      titleKa: titleKa,
+      titleEn: titleEn ?? title,
     );
   }
 }

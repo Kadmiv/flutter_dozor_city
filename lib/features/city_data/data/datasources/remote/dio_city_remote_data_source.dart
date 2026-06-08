@@ -140,6 +140,24 @@ class DioCityRemoteDataSource implements CityRemoteDataSource {
   }
 
   @override
+  Future<List<RouteZone>> getCityStops(String cityId) async {
+    _ensureLegacyCityCookieSupported(cityId);
+    final t1 = await _getOrLoadT1(cityId);
+    final stopsById = <String, RouteZone>{};
+    for (final route in t1.routes) {
+      final routeId = '${route.id}';
+      for (final zone in route.zones) {
+        final stop = zone.toEntity(routeId: routeId);
+        if (stop.position == null) {
+          continue;
+        }
+        stopsById.putIfAbsent(stop.id, () => stop);
+      }
+    }
+    return stopsById.values.toList(growable: false);
+  }
+
+  @override
   Future<void> preloadCityData(String cityId) async {
     _ensureLegacyCityCookieSupported(cityId);
     await _getOrLoadT1(cityId, forceReload: true);

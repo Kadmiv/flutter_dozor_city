@@ -2,6 +2,7 @@ import 'package:flutter_dozor_city/features/city_data/data/datasources/local/cit
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_arrival.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/storage/hive_boxes.dart';
@@ -11,8 +12,8 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
   HiveCityLocalDataSource({
     required Box<dynamic> citiesBox,
     required Box<dynamic> routesBox,
-  })  : _citiesBox = citiesBox,
-        _routesBox = routesBox;
+  }) : _citiesBox = citiesBox,
+       _routesBox = routesBox;
 
   final Box<dynamic> _citiesBox;
   final Box<dynamic> _routesBox;
@@ -27,6 +28,8 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
         .where(
           (key) =>
               key.startsWith('${HiveBoxes.routesCache}:$cityId:') ||
+              key.startsWith('stops:$cityId') ||
+              key.startsWith('stops_updated_at:$cityId') ||
               key.startsWith('zones:$cityId-') ||
               key.startsWith('arrival:$cityId-'),
         )
@@ -45,6 +48,7 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
       busMinutes: _readIntList(raw['busMinutes']),
       trolleyMinutes: _readIntList(raw['trolleyMinutes']),
       tramMinutes: _readIntList(raw['tramMinutes']),
+      routeArrivals: _readRouteArrivals(raw['routeArrivals']),
     );
   }
 
@@ -92,7 +96,9 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
     required String cityId,
     required int transportType,
   }) async {
-    final raw = _routesBox.get(_routesKey(cityId: cityId, transportType: transportType));
+    final raw = _routesBox.get(
+      _routesKey(cityId: cityId, transportType: transportType),
+    );
     if (raw is! List) {
       return const [];
     }
@@ -104,6 +110,10 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
             shortName: item['shortName'] as String,
             title: item['title'] as String,
             transportType: (item['transportType'] as num).toInt(),
+            shortNameKa: item['shortNameKa'] as String?,
+            shortNameEn: item['shortNameEn'] as String?,
+            titleKa: item['titleKa'] as String?,
+            titleEn: item['titleEn'] as String?,
             polylineSegments: ((item['polylineSegments'] as List?) ?? const [])
                 .whereType<List>()
                 .map(
@@ -118,6 +128,9 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
                       .toList(growable: false),
                 )
                 .toList(growable: false),
+            polylineSegmentsByStatus: _readPolylineSegmentsByStatus(
+              item['polylineSegmentsByStatus'],
+            ),
             lineColorValue: (item['lineColorValue'] as num? ?? 0xFF1C4F7A)
                 .toInt(),
           ),
@@ -152,6 +165,41 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
             id: item['id'] as String,
             routeId: item['routeId'] as String,
             name: item['name'] as String,
+            nameKa: item['nameKa'] as String?,
+            nameEn: item['nameEn'] as String?,
+            status: (item['status'] as num?)?.toInt(),
+            position: _readAppLatLng(item['position']),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  @override
+  Future<DateTime?> getCityStopsUpdatedAt(String cityId) async {
+    final raw = _routesBox.get(_cityStopsUpdatedAtKey(cityId));
+    if (raw is String) {
+      return DateTime.tryParse(raw);
+    }
+    return null;
+  }
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async {
+    final raw = _routesBox.get(_cityStopsKey(cityId));
+    if (raw is! List) {
+      return const [];
+    }
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => RouteZone(
+            id: item['id'] as String,
+            routeId: item['routeId'] as String,
+            name: item['name'] as String,
+            nameKa: item['nameKa'] as String?,
+            nameEn: item['nameEn'] as String?,
+            status: (item['status'] as num?)?.toInt(),
+            position: _readAppLatLng(item['position']),
           ),
         )
         .toList(growable: false);
@@ -173,6 +221,17 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
       'busMinutes': arrivalInfo.busMinutes,
       'trolleyMinutes': arrivalInfo.trolleyMinutes,
       'tramMinutes': arrivalInfo.tramMinutes,
+      'routeArrivals': arrivalInfo.routeArrivals
+          .map(
+            (arrival) => <String, dynamic>{
+              'routeId': arrival.routeId,
+              'routeShortName': arrival.routeShortName,
+              'busId': arrival.busId,
+              'busName': arrival.busName,
+              'minute': arrival.minute,
+            },
+          )
+          .toList(growable: false),
     });
     await _routesBox.put(
       _arrivalUpdatedAtKey(arrivalInfo.zoneId),
@@ -210,11 +269,42 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
               'id': zone.id,
               'routeId': zone.routeId,
               'name': zone.name,
+              'nameKa': zone.nameKa,
+              'nameEn': zone.nameEn,
+              'status': zone.status,
+              'position': _writeAppLatLng(zone.position),
             },
           )
           .toList(growable: false),
     );
-    await _routesBox.put(_zonesUpdatedAtKey(routeId), DateTime.now().toIso8601String());
+    await _routesBox.put(
+      _zonesUpdatedAtKey(routeId),
+      DateTime.now().toIso8601String(),
+    );
+  }
+
+  @override
+  Future<void> saveCityStops(String cityId, List<RouteZone> stops) async {
+    await _routesBox.put(
+      _cityStopsKey(cityId),
+      stops
+          .map(
+            (stop) => <String, dynamic>{
+              'id': stop.id,
+              'routeId': stop.routeId,
+              'name': stop.name,
+              'nameKa': stop.nameKa,
+              'nameEn': stop.nameEn,
+              'status': stop.status,
+              'position': _writeAppLatLng(stop.position),
+            },
+          )
+          .toList(growable: false),
+    );
+    await _routesBox.put(
+      _cityStopsUpdatedAtKey(cityId),
+      DateTime.now().toIso8601String(),
+    );
   }
 
   @override
@@ -232,6 +322,10 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
               'shortName': route.shortName,
               'title': route.title,
               'transportType': route.transportType,
+              'shortNameKa': route.shortNameKa,
+              'shortNameEn': route.shortNameEn,
+              'titleKa': route.titleKa,
+              'titleEn': route.titleEn,
               'lineColorValue': route.lineColorValue,
               'polylineSegments': route.polylineSegments
                   .map(
@@ -245,6 +339,23 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
                         .toList(growable: false),
                   )
                   .toList(growable: false),
+              'polylineSegmentsByStatus': route.polylineSegmentsByStatus.map(
+                (status, segments) => MapEntry(
+                  '$status',
+                  segments
+                      .map(
+                        (segment) => segment
+                            .map(
+                              (point) => <String, dynamic>{
+                                'lat': point.lat,
+                                'lng': point.lng,
+                              },
+                            )
+                            .toList(growable: false),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
             },
           )
           .toList(growable: false),
@@ -262,15 +373,90 @@ class HiveCityLocalDataSource implements CityLocalDataSource {
     return raw.map((item) => (item as num).toInt()).toList(growable: false);
   }
 
-  String _routesKey({
-    required String cityId,
-    required int transportType,
-  }) {
+  List<RouteArrival> _readRouteArrivals(dynamic raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => RouteArrival(
+            routeId: '${item['routeId'] ?? ''}',
+            routeShortName: '${item['routeShortName'] ?? ''}',
+            busId: '${item['busId'] ?? ''}',
+            busName: '${item['busName'] ?? ''}',
+            minute: (item['minute'] as num?)?.toInt() ?? 0,
+          ),
+        )
+        .where(
+          (arrival) =>
+              arrival.routeId.isNotEmpty &&
+              arrival.routeShortName.isNotEmpty &&
+              arrival.busId.isNotEmpty &&
+              arrival.busName.isNotEmpty &&
+              arrival.minute > 0,
+        )
+        .toList(growable: false);
+  }
+
+  Map<int, List<List<AppLatLng>>> _readPolylineSegmentsByStatus(dynamic raw) {
+    if (raw is! Map) {
+      return const {};
+    }
+    final result = <int, List<List<AppLatLng>>>{};
+    for (final entry in raw.entries) {
+      final status = int.tryParse('${entry.key}');
+      if (status == null || entry.value is! List) {
+        continue;
+      }
+      result[status] = (entry.value as List)
+          .whereType<List>()
+          .map(
+            (segment) => segment
+                .whereType<Map>()
+                .map(
+                  (point) => AppLatLng(
+                    lat: ((point['lat'] as num?) ?? 0).toDouble(),
+                    lng: ((point['lng'] as num?) ?? 0).toDouble(),
+                  ),
+                )
+                .toList(growable: false),
+          )
+          .toList(growable: false);
+    }
+    return result;
+  }
+
+  AppLatLng? _readAppLatLng(dynamic raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final lat = raw['lat'];
+    final lng = raw['lng'];
+    if (lat is! num || lng is! num) {
+      return null;
+    }
+    return AppLatLng(lat: lat.toDouble(), lng: lng.toDouble());
+  }
+
+  Map<String, dynamic>? _writeAppLatLng(AppLatLng? point) {
+    if (point == null) {
+      return null;
+    }
+    return <String, dynamic>{
+      'lat': point.lat,
+      'lng': point.lng,
+    };
+  }
+
+  String _routesKey({required String cityId, required int transportType}) {
     return '${HiveBoxes.routesCache}:$cityId:$transportType';
   }
 
   String _arrivalUpdatedAtKey(String zoneId) => 'arrival_updated_at:$zoneId';
   String _zonesUpdatedAtKey(String routeId) => 'zones_updated_at:$routeId';
+  String _cityStopsKey(String cityId) => 'stops:$cityId';
+  String _cityStopsUpdatedAtKey(String cityId) => 'stops_updated_at:$cityId';
   String _routesUpdatedAtKey({
     required String cityId,
     required int transportType,

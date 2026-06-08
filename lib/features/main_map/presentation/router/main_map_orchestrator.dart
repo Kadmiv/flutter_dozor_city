@@ -10,9 +10,12 @@ import 'package:flutter_dozor_city/features/city_selection/presentation/widgets/
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/widgets/vehicle_details_sheet.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/pages/main_map_page.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/widgets/map_overlays/routes_sheet.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/widgets/map_overlays/stops_sheet.dart';
@@ -26,7 +29,10 @@ class MainMapOrchestrator extends StatefulWidget {
     required this.mapOverlaysCubit,
     required this.mapRoutesCubit,
     required this.mapArrivalsCubit,
+    required this.mapStopsCubit,
     required this.routePreviewCubit,
+    required this.mapLanguageCubit,
+    required this.mapRoutePlanningCubit,
     required this.mapController,
     required this.createCitySelectionCubit,
     required this.child,
@@ -37,7 +43,10 @@ class MainMapOrchestrator extends StatefulWidget {
   final MapOverlaysCubit mapOverlaysCubit;
   final MapRoutesCubit mapRoutesCubit;
   final MapArrivalsCubit mapArrivalsCubit;
+  final MapStopsCubit mapStopsCubit;
   final RoutePreviewCubit routePreviewCubit;
+  final MapLanguageCubit mapLanguageCubit;
+  final MapRoutePlanningCubit mapRoutePlanningCubit;
   final MapController mapController;
   final CitySelectionCubit Function() createCitySelectionCubit;
   final Widget child;
@@ -55,10 +64,13 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
 
   Future<void> _bootstrapMainMap() async {
     await widget.mainMapCubit.refresh();
+    await widget.mapLanguageCubit.load();
     final city = widget.mainMapCubit.state.city;
     if (city == null || !mounted) {
+      widget.mapStopsCubit.reset();
       return;
     }
+    await widget.mapStopsCubit.loadForCity(city.id);
     await widget.mapRoutesCubit.restoreForCity(city.id);
     await widget.liveTrackingCubit.start(
       city.id,
@@ -117,10 +129,13 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
     }
     widget.routePreviewCubit.clear();
     widget.mapArrivalsCubit.reset();
+    widget.mapStopsCubit.reset();
+    widget.mapRoutePlanningCubit.clear();
     widget.mainMapCubit
       ..setRouteMode(MainMapMode.routes)
       ..setActiveMapActionLabel('Місто ${selectedCity.name}');
     await widget.mainMapCubit.refresh(forceCityCenter: true);
+    await widget.mapStopsCubit.loadForCity(selectedCity.id);
     await widget.mapRoutesCubit.restoreForCity(selectedCity.id);
     await widget.liveTrackingCubit.start(
       selectedCity.id,
@@ -145,6 +160,7 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
       ..setRouteMode(MainMapMode.routes)
       ..setActiveMapActionLabel(_transportTypeLabel(transportType));
     widget.mapArrivalsCubit.clearZones();
+    widget.mapRoutePlanningCubit.cancel();
     await widget.mapRoutesCubit.selectTransportType(
       cityId: cityId,
       type: transportType,
@@ -167,6 +183,7 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
               route: route,
             );
             widget.mapArrivalsCubit.clearZones();
+            widget.mapRoutePlanningCubit.cancel();
             _syncRouteLabel();
             await widget.liveTrackingCubit.updateFilters(
               _selectedRouteIdsOrNull(),
@@ -182,10 +199,11 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
     if (cityId == null) {
       return;
     }
+    widget.mapRoutePlanningCubit.cancel();
     await widget.mapRoutesCubit.setActiveRoute(cityId: cityId, route: route);
     await widget.mapArrivalsCubit.loadZones(cityId: cityId, routeId: route.id);
     widget.mainMapCubit.setActiveMapActionLabel(
-      'Зупинки маршруту ${route.shortName}',
+      'Зупинки маршруту ${route.displayShortName(widget.mapLanguageCubit.state.language)}',
     );
     if (!mounted) {
       return;
@@ -238,7 +256,7 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
     widget.mainMapCubit.setActiveMapActionLabel(
       selectedRoutes.isEmpty
           ? 'Маршрути очищено'
-          : 'Маршрут ${selectedRoutes.last.shortName}',
+          : 'Маршрут ${selectedRoutes.last.displayShortName(widget.mapLanguageCubit.state.language)}',
     );
   }
 
@@ -288,7 +306,10 @@ class _MainMapOrchestratorState extends State<MainMapOrchestrator> {
         BlocProvider.value(value: widget.mapOverlaysCubit),
         BlocProvider.value(value: widget.mapRoutesCubit),
         BlocProvider.value(value: widget.mapArrivalsCubit),
+        BlocProvider.value(value: widget.mapStopsCubit),
         BlocProvider.value(value: widget.routePreviewCubit),
+        BlocProvider.value(value: widget.mapLanguageCubit),
+        BlocProvider.value(value: widget.mapRoutePlanningCubit),
       ],
       child: MainMapPage(
         mapController: widget.mapController,

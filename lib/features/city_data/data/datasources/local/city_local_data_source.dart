@@ -25,6 +25,9 @@ abstract class CityLocalDataSource {
   Future<List<RouteZone>> getRouteZones(String routeId);
   Future<DateTime?> getRouteZonesUpdatedAt(String routeId);
   Future<void> saveRouteZones(String routeId, List<RouteZone> zones);
+  Future<List<RouteZone>> getCityStops(String cityId);
+  Future<DateTime?> getCityStopsUpdatedAt(String cityId);
+  Future<void> saveCityStops(String cityId, List<RouteZone> stops);
 
   Future<ArrivalInfo?> getArrivalByZone(String zoneId);
   Future<DateTime?> getArrivalUpdatedAt(String zoneId);

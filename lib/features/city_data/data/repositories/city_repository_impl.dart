@@ -22,6 +22,7 @@ class CityRepositoryImpl implements CityRepository, CitiesRepository, CityDataFr
   static const _citiesCacheTtl = Duration(hours: 24);
   static const _routesCacheTtl = Duration(hours: 6);
   static const _zonesCacheTtl = Duration(hours: 6);
+  static const _cityStopsCacheTtl = Duration(hours: 6);
   static const _arrivalCacheTtl = Duration(seconds: 20);
 
   CityRepositoryImpl({
@@ -161,6 +162,25 @@ class CityRepositoryImpl implements CityRepository, CitiesRepository, CityDataFr
       final zones = await _remoteDataSource.getRouteZones(routeId);
       await _localDataSource.saveRouteZones(routeId, zones);
       return zones;
+    } on DioException {
+      if (cached.isNotEmpty) {
+        return cached;
+      }
+      throw const NetworkFailure();
+    }
+  }
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async {
+    final cached = await _localDataSource.getCityStops(cityId);
+    final cachedUpdatedAt = await _localDataSource.getCityStopsUpdatedAt(cityId);
+    if (cached.isNotEmpty && _isFresh(cachedUpdatedAt, _cityStopsCacheTtl)) {
+      return cached;
+    }
+    try {
+      final stops = await _remoteDataSource.getCityStops(cityId);
+      await _localDataSource.saveCityStops(cityId, stops);
+      return stops;
     } on DioException {
       if (cached.isNotEmpty) {
         return cached;

@@ -14,6 +14,7 @@ abstract class CityRemoteDataSource {
     required int transportType,
   });
   Future<List<RouteZone>> getRouteZones(String routeId);
+  Future<List<RouteZone>> getCityStops(String cityId);
   Future<ArrivalInfo> getArrivalByZone({
     required String cityId,
     required String zoneId,

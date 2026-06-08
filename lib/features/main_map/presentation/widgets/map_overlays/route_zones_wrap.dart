@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
-import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
+import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 
 class RouteZonesWrap extends StatelessWidget {
   const RouteZonesWrap({super.key, required this.zones});
@@ -23,12 +23,12 @@ class RouteZonesWrap extends StatelessWidget {
                   return;
                 }
                 context.read<MainMapCubit>().setActiveMapActionLabel(
-                      'Зупинка ${zone.name}',
-                    );
-                context.read<MapOverlaysCubit>().loadArrival(
-                      cityId: cityId,
-                      zoneId: zone.id,
-                    );
+                  'Зупинка ${zone.name}',
+                );
+                context.read<MapArrivalsCubit>().loadArrival(
+                  cityId: cityId,
+                  zoneId: zone.id,
+                );
               },
               child: Chip(
                 label: Text(zone.name),

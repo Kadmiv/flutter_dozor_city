@@ -8,12 +8,18 @@ import 'package:flutter_dozor_city/core/domain/repositories/map_camera_repositor
 import 'package:flutter_dozor_city/core/domain/repositories/route_cache_metadata_repository.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/ui_flags_repository.dart';
 
-class HiveSessionRepository extends SessionRepository implements CitySessionRepository, RouteCacheMetadataRepository, MapCameraRepository, UiFlagsRepository {
+class HiveSessionRepository extends SessionRepository
+    implements
+        CitySessionRepository,
+        RouteCacheMetadataRepository,
+        MapCameraRepository,
+        UiFlagsRepository {
   HiveSessionRepository({required Box<dynamic> box})
-      : _box = box,
-        _selectedCity = _readCity(box.get(_selectedCityKey));
+    : _box = box,
+      _selectedCity = _readCity(box.get(_selectedCityKey));
 
   static const _selectedCityKey = 'selected_city';
+  static const _mapLanguageKey = 'map_language';
 
   final Box<dynamic> _box;
   City? _selectedCity;
@@ -125,6 +131,23 @@ class HiveSessionRepository extends SessionRepository implements CitySessionRepo
     await _box.put(_uiFlagKey(key), value);
   }
 
+  @override
+  Future<String?> getMapLanguage() async {
+    final raw = _box.get(_mapLanguageKey);
+    final value = raw is String ? raw.trim() : '';
+    return value.isEmpty ? null : value;
+  }
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {
+    final value = languageCode.trim();
+    if (value.isEmpty) {
+      await _box.delete(_mapLanguageKey);
+      return;
+    }
+    await _box.put(_mapLanguageKey, value);
+  }
+
   static City? _readCity(dynamic raw) {
     if (raw is! Map) {
       return null;
@@ -139,7 +162,8 @@ class HiveSessionRepository extends SessionRepository implements CitySessionRepo
     );
   }
 
-  static String _routesCacheHashKey(String cityId) => 'routes_cache_hash_v2:$cityId';
+  static String _routesCacheHashKey(String cityId) =>
+      'routes_cache_hash_v2:$cityId';
   static String _selectedTransportTypeKey(String cityId) =>
       'selected_transport_type:$cityId';
   static String _selectedRouteIdsKey(String cityId, int transportType) =>

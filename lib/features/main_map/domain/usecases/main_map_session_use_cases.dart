@@ -1,6 +1,7 @@
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_display_language.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/city_session_repository.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/map_camera_repository.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
@@ -21,7 +22,8 @@ class GetMapCameraUseCase {
 class SaveMapCameraUseCase {
   const SaveMapCameraUseCase(this._repository);
   final MapCameraRepository _repository;
-  Future<void> call(String cityId, AppMapCamera camera) => _repository.setMapCamera(cityId, camera);
+  Future<void> call(String cityId, AppMapCamera camera) =>
+      _repository.setMapCamera(cityId, camera);
 }
 
 class GetUiFlagUseCase {
@@ -33,7 +35,8 @@ class GetUiFlagUseCase {
 class SetUiFlagUseCase {
   const SetUiFlagUseCase(this._repository);
   final UiFlagsRepository _repository;
-  Future<void> call(String key, bool value) => _repository.setUiFlag(key, value);
+  Future<void> call(String key, bool value) =>
+      _repository.setUiFlag(key, value);
 }
 
 class GetSelectedMapRoutesUseCase {
@@ -46,9 +49,21 @@ class GetSelectedMapRoutesUseCase {
 class SaveSelectedMapRoutesUseCase {
   const SaveSelectedMapRoutesUseCase(this._repository);
   final SessionRepository _repository;
-  Future<void> call(
-    String cityId,
-    SelectedMapRoutes selectedMapRoutes,
-  ) =>
+  Future<void> call(String cityId, SelectedMapRoutes selectedMapRoutes) =>
       _repository.setSelectedMapRoutes(cityId, selectedMapRoutes);
+}
+
+class GetMapLanguageUseCase {
+  const GetMapLanguageUseCase(this._repository);
+  final SessionRepository _repository;
+  Future<AppDisplayLanguage> call() async {
+    return AppDisplayLanguageX.fromCode(await _repository.getMapLanguage());
+  }
+}
+
+class SaveMapLanguageUseCase {
+  const SaveMapLanguageUseCase(this._repository);
+  final SessionRepository _repository;
+  Future<void> call(AppDisplayLanguage language) =>
+      _repository.setMapLanguage(language.code);
 }

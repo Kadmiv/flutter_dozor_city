@@ -8,12 +8,18 @@ import 'package:flutter_dozor_city/core/domain/repositories/map_camera_repositor
 import 'package:flutter_dozor_city/core/domain/repositories/route_cache_metadata_repository.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/ui_flags_repository.dart';
 
-class InMemorySessionRepository extends SessionRepository implements CitySessionRepository, RouteCacheMetadataRepository, MapCameraRepository, UiFlagsRepository {
+class InMemorySessionRepository extends SessionRepository
+    implements
+        CitySessionRepository,
+        RouteCacheMetadataRepository,
+        MapCameraRepository,
+        UiFlagsRepository {
   City? _selectedCity;
   final Map<String, int> _routesHashes = {};
   final Map<String, AppMapCamera> _mapCameras = {};
   final Map<String, bool> _uiFlags = {};
   final Map<String, SelectedMapRoutes> _selectedMapRoutes = {};
+  String? _mapLanguage;
 
   @override
   bool get hasSelectedCity => _selectedCity != null;
@@ -29,7 +35,8 @@ class InMemorySessionRepository extends SessionRepository implements CitySession
   City? get selectedCity => _selectedCity;
 
   @override
-  Future<AppMapCamera?> getMapCamera(String cityId) async => _mapCameras[cityId];
+  Future<AppMapCamera?> getMapCamera(String cityId) async =>
+      _mapCameras[cityId];
 
   @override
   Future<bool> getUiFlag(String key) async => _uiFlags[key] ?? false;
@@ -61,5 +68,13 @@ class InMemorySessionRepository extends SessionRepository implements CitySession
   @override
   Future<void> setUiFlag(String key, bool value) async {
     _uiFlags[key] = value;
+  }
+
+  @override
+  Future<String?> getMapLanguage() async => _mapLanguage;
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {
+    _mapLanguage = languageCode.trim().isEmpty ? null : languageCode.trim();
   }
 }

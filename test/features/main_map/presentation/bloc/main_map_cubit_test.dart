@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
@@ -58,6 +59,12 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> setUiFlag(String key, bool value) async {
     _uiFlags[key] = value;
   }
+
+  @override
+  Future<String?> getMapLanguage() async => null;
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {}
 }
 
 class _FakeCityRepository implements CityRepository {
@@ -88,6 +95,16 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [
+    RouteZone(
+      id: 'stop-1',
+      routeId: 'route-1',
+      name: 'Зупинка 1',
+      position: AppLatLng(lat: 50.25, lng: 28.66),
+    ),
+  ];
 
   @override
   Future<List<TransportRoute>> getRoutesByType({
@@ -125,16 +142,23 @@ void main() {
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
         getUiFlagUseCase: GetUiFlagUseCase(session),
         setUiFlagUseCase: SetUiFlagUseCase(session),
-        checkCityDataFreshnessUseCase:
-            CheckMainMapCityDataFreshnessUseCase(repository),
+        checkCityDataFreshnessUseCase: CheckMainMapCityDataFreshnessUseCase(
+          repository,
+        ),
       );
 
       await cubit.refresh();
 
       expect(repository.freshnessChecks, 1);
       expect(cubit.state.city, city);
-      expect(cubit.state.camera, const AppMapCamera(centerLat: 50.3, centerLng: 28.7, zoom: 14));
-      expect(cubit.state.dismissedHints, containsAll(<String>{'select-city', 'arrival'}));
+      expect(
+        cubit.state.camera,
+        const AppMapCamera(centerLat: 50.3, centerLng: 28.7, zoom: 14),
+      );
+      expect(
+        cubit.state.dismissedHints,
+        containsAll(<String>{'select-city', 'arrival'}),
+      );
       expect(cubit.state.dismissedHints, isNot(contains('map-menu')));
     });
 
@@ -146,8 +170,9 @@ void main() {
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
         getUiFlagUseCase: GetUiFlagUseCase(session),
         setUiFlagUseCase: SetUiFlagUseCase(session),
-        checkCityDataFreshnessUseCase:
-            CheckMainMapCityDataFreshnessUseCase(_FakeCityRepository()),
+        checkCityDataFreshnessUseCase: CheckMainMapCityDataFreshnessUseCase(
+          _FakeCityRepository(),
+        ),
       );
 
       await cubit.dismissHint('map-menu');
@@ -156,27 +181,31 @@ void main() {
       expect(await session.getUiFlag('map-menu'), isTrue);
     });
 
-    test('openBottomSheet(search) forces routes mode and toggleMarkers updates label', () {
-      final session = _FakeSessionRepository(city: city);
-      final cubit = MainMapCubit(
-        getSelectedCityUseCase: GetSelectedCityUseCase(session),
-        getMapCameraUseCase: GetMapCameraUseCase(session),
-        saveMapCameraUseCase: SaveMapCameraUseCase(session),
-        getUiFlagUseCase: GetUiFlagUseCase(session),
-        setUiFlagUseCase: SetUiFlagUseCase(session),
-        checkCityDataFreshnessUseCase:
-            CheckMainMapCityDataFreshnessUseCase(_FakeCityRepository()),
-      );
+    test(
+      'openBottomSheet(search) forces routes mode and toggleMarkers updates label',
+      () {
+        final session = _FakeSessionRepository(city: city);
+        final cubit = MainMapCubit(
+          getSelectedCityUseCase: GetSelectedCityUseCase(session),
+          getMapCameraUseCase: GetMapCameraUseCase(session),
+          saveMapCameraUseCase: SaveMapCameraUseCase(session),
+          getUiFlagUseCase: GetUiFlagUseCase(session),
+          setUiFlagUseCase: SetUiFlagUseCase(session),
+          checkCityDataFreshnessUseCase: CheckMainMapCityDataFreshnessUseCase(
+            _FakeCityRepository(),
+          ),
+        );
 
-      cubit.setRouteMode(MainMapMode.city);
-      cubit.openBottomSheet(tab: MainMapTab.search);
-      cubit.toggleMarkers();
+        cubit.setRouteMode(MainMapMode.city);
+        cubit.openBottomSheet(tab: MainMapTab.search);
+        cubit.toggleMarkers();
 
-      expect(cubit.state.currentTab, MainMapTab.search);
-      expect(cubit.state.mode, MainMapMode.routes);
-      expect(cubit.state.isBottomSheetVisible, isTrue);
-      expect(cubit.state.showMarkers, isFalse);
-      expect(cubit.state.activeMapActionLabel, 'Маркери приховані');
-    });
+        expect(cubit.state.currentTab, MainMapTab.search);
+        expect(cubit.state.mode, MainMapMode.routes);
+        expect(cubit.state.isBottomSheetVisible, isTrue);
+        expect(cubit.state.showMarkers, isFalse);
+        expect(cubit.state.activeMapActionLabel, 'Маркери приховані');
+      },
+    );
   });
 }

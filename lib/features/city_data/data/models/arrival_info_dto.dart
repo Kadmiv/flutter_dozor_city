@@ -1,4 +1,5 @@
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_arrival.dart';
 
 class ArrivalInfoDto {
   const ArrivalInfoDto({
@@ -6,12 +7,14 @@ class ArrivalInfoDto {
     required this.busMinutes,
     required this.trolleyMinutes,
     required this.tramMinutes,
+    required this.routeArrivals,
   });
 
   final String zoneId;
   final List<int> busMinutes;
   final List<int> trolleyMinutes;
   final List<int> tramMinutes;
+  final List<RouteArrival> routeArrivals;
 
   factory ArrivalInfoDto.fromJson(Map<String, Object?> json) {
     return ArrivalInfoDto(
@@ -19,6 +22,7 @@ class ArrivalInfoDto {
       busMinutes: _parseList(json['busMinutes'] ?? json['a1']),
       trolleyMinutes: _parseList(json['trolleyMinutes'] ?? json['a2']),
       tramMinutes: _parseList(json['tramMinutes'] ?? json['a3']),
+      routeArrivals: const [],
     );
   }
 
@@ -28,6 +32,7 @@ class ArrivalInfoDto {
       busMinutes: busMinutes,
       trolleyMinutes: trolleyMinutes,
       tramMinutes: tramMinutes,
+      routeArrivals: routeArrivals,
     );
   }
 }

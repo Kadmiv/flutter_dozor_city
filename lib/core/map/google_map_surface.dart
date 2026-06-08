@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
+import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
 import 'package:flutter_dozor_city/core/map/google_map_controller_adapter.dart';
+import 'package:flutter_dozor_city/core/map/map_zoom_thresholds.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
@@ -18,11 +20,16 @@ class GoogleMapSurface extends StatefulWidget {
     required this.vehicles,
     required this.selectedRoutesCount,
     required this.routeColorsById,
+    required this.showMarkers,
+    this.cityStops = const [],
     this.onVehicleTap,
+    this.onCityStopTap,
     this.routePolylines = const [],
     this.previewGeometry = const [],
     this.previewStart,
     this.previewEnd,
+    this.selectedRouteStatus,
+    this.onMapTap,
     this.onCameraIdle,
   });
 
@@ -30,11 +37,16 @@ class GoogleMapSurface extends StatefulWidget {
   final List<AnimatedVehicle> vehicles;
   final int selectedRoutesCount;
   final Map<String, int> routeColorsById;
+  final bool showMarkers;
+  final List<RouteZone> cityStops;
   final ValueChanged<Vehicle>? onVehicleTap;
+  final Future<void> Function(RouteZone)? onCityStopTap;
   final List<TransportRoute> routePolylines;
   final List<AppLatLng> previewGeometry;
   final SelectedPoint? previewStart;
   final SelectedPoint? previewEnd;
+  final int? selectedRouteStatus;
+  final ValueChanged<AppLatLng>? onMapTap;
   final ValueChanged<gmaps.CameraPosition>? onCameraIdle;
 
   @override
@@ -123,7 +135,13 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
               zoom: position.zoom,
             ),
           );
+          setState(() {});
         },
+        onTap: widget.onMapTap == null
+            ? null
+            : (latLng) => widget.onMapTap!(
+                AppLatLng(lat: latLng.latitude, lng: latLng.longitude),
+              ),
         markers: _buildMarkers(),
         polylines: _buildPolylines(),
       ),
@@ -131,33 +149,66 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
   }
 
   Set<gmaps.Marker> _buildMarkers() {
-    final markers = widget.vehicles.map((animatedVehicle) {
-      final vehicle = animatedVehicle.vehicleAt(_frameNow);
-      return gmaps.Marker(
-        markerId: gmaps.MarkerId(vehicle.id),
-        position: gmaps.LatLng(vehicle.lat, vehicle.lng),
-        rotation: vehicle.azimuth.toDouble(),
-        anchor: const Offset(0.5, 0.5),
-        onTap: widget.onVehicleTap == null
-            ? null
-            : () => widget.onVehicleTap!(vehicle),
-        icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
-          _markerHueForColor(
-            Color(widget.routeColorsById[vehicle.routeId] ?? 0xFFC8102E),
-          ),
-        ),
-        infoWindow: gmaps.InfoWindow(
-          title: 'Маршрут ${vehicle.routeShortName} • ${vehicle.govNumber}',
-          snippet: '${vehicle.routeTitle} • ${vehicle.speed} км/год',
-        ),
+    final markers = <gmaps.Marker>{};
+    final showCityStops =
+        widget.showMarkers &&
+        widget.mapController.camera.zoom >= kCityStopsZoomThreshold;
+    if (showCityStops) {
+      markers.addAll(
+        widget.cityStops
+            .where((stop) => stop.position != null)
+            .map(
+              (stop) => gmaps.Marker(
+                markerId: gmaps.MarkerId('stop-${stop.id}'),
+                position: gmaps.LatLng(stop.position!.lat, stop.position!.lng),
+                anchor: const Offset(0.5, 1.0),
+                zIndexInt: 1,
+                onTap: widget.onCityStopTap == null
+                    ? null
+                    : () {
+                        unawaited(widget.onCityStopTap!(stop));
+                      },
+                icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+                  gmaps.BitmapDescriptor.hueAzure,
+                ),
+                infoWindow: gmaps.InfoWindow(title: stop.name),
+              ),
+            ),
       );
-    }).toSet();
+    }
+    if (widget.showMarkers) {
+      markers.addAll(
+        widget.vehicles.map((animatedVehicle) {
+          final vehicle = animatedVehicle.vehicleAt(_frameNow);
+          return gmaps.Marker(
+            markerId: gmaps.MarkerId(vehicle.id),
+            position: gmaps.LatLng(vehicle.lat, vehicle.lng),
+            rotation: vehicle.azimuth.toDouble(),
+            anchor: const Offset(0.5, 0.5),
+            zIndexInt: 2,
+            onTap: widget.onVehicleTap == null
+                ? null
+                : () => widget.onVehicleTap!(vehicle),
+            icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
+              _markerHueForColor(
+                Color(widget.routeColorsById[vehicle.routeId] ?? 0xFFC8102E),
+              ),
+            ),
+            infoWindow: gmaps.InfoWindow(
+              title: 'Маршрут ${vehicle.routeShortName} • ${vehicle.govNumber}',
+              snippet: '${vehicle.routeTitle} • ${vehicle.speed} км/год',
+            ),
+          );
+        }),
+      );
+    }
     final start = widget.previewStart;
     if (start != null) {
       markers.add(
         gmaps.Marker(
           markerId: const gmaps.MarkerId('preview-start'),
           position: gmaps.LatLng(start.lat, start.lng),
+          zIndexInt: 3,
           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
             gmaps.BitmapDescriptor.hueGreen,
           ),
@@ -171,6 +222,7 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
         gmaps.Marker(
           markerId: const gmaps.MarkerId('preview-end'),
           position: gmaps.LatLng(end.lat, end.lng),
+          zIndexInt: 3,
           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(
             gmaps.BitmapDescriptor.hueRed,
           ),
@@ -189,7 +241,9 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
   Set<gmaps.Polyline> _buildPolylines() {
     final polylines = widget.routePolylines
         .expand(
-          (route) => route.polylineSegments.indexed
+          (route) => route
+              .displayPolylineSegments(widget.selectedRouteStatus)
+              .indexed
               .where((entry) => entry.$2.length > 1)
               .map(
                 (entry) => gmaps.Polyline(

@@ -1,0 +1,19 @@
+name: eta_service
+description: Dart ETA collector service for Batumi/thetamaps data
+publish_to: none
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  args: ^2.7.0
+  collection: ^1.19.1
+  http: ^1.4.0
+  path: ^1.9.1
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  sqlite3: ^2.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.3

@@ -5,6 +5,7 @@ import 'package:flutter_dozor_city/features/main_map/domain/usecases/check_city_
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_session_use_cases.dart';
 
 enum MainMapTab { search, results, stored }
+
 enum MainMapMode { city, routes }
 
 class MainMapState {
@@ -42,8 +43,7 @@ class MainMapState {
       city: city ?? this.city,
       currentTab: currentTab ?? this.currentTab,
       mode: mode ?? this.mode,
-      isBottomSheetVisible:
-          isBottomSheetVisible ?? this.isBottomSheetVisible,
+      isBottomSheetVisible: isBottomSheetVisible ?? this.isBottomSheetVisible,
       showMarkers: showMarkers ?? this.showMarkers,
       activeMapActionLabel: activeMapActionLabel ?? this.activeMapActionLabel,
       dismissedHints: dismissedHints ?? this.dismissedHints,
@@ -60,14 +60,13 @@ class MainMapCubit extends Cubit<MainMapState> {
     required GetUiFlagUseCase getUiFlagUseCase,
     required SetUiFlagUseCase setUiFlagUseCase,
     required CheckMainMapCityDataFreshnessUseCase checkCityDataFreshnessUseCase,
-  })
-      : _getSelectedCityUseCase = getSelectedCityUseCase,
-        _getMapCameraUseCase = getMapCameraUseCase,
-        _saveMapCameraUseCase = saveMapCameraUseCase,
-        _getUiFlagUseCase = getUiFlagUseCase,
-        _setUiFlagUseCase = setUiFlagUseCase,
-        _checkCityDataFreshnessUseCase = checkCityDataFreshnessUseCase,
-        super(MainMapState(city: getSelectedCityUseCase()));
+  }) : _getSelectedCityUseCase = getSelectedCityUseCase,
+       _getMapCameraUseCase = getMapCameraUseCase,
+       _saveMapCameraUseCase = saveMapCameraUseCase,
+       _getUiFlagUseCase = getUiFlagUseCase,
+       _setUiFlagUseCase = setUiFlagUseCase,
+       _checkCityDataFreshnessUseCase = checkCityDataFreshnessUseCase,
+       super(MainMapState(city: getSelectedCityUseCase()));
 
   final GetSelectedCityUseCase _getSelectedCityUseCase;
   final GetMapCameraUseCase _getMapCameraUseCase;
@@ -89,11 +88,11 @@ class MainMapCubit extends Cubit<MainMapState> {
               zoom: city.zoom,
             )
           : await _getMapCameraUseCase(city.id) ??
-              AppMapCamera(
-                centerLat: city.centerLat,
-                centerLng: city.centerLng,
-                zoom: city.zoom,
-              );
+                AppMapCamera(
+                  centerLat: city.centerLat,
+                  centerLng: city.centerLng,
+                  zoom: city.zoom,
+                );
     }
     for (final key in const ['select-city', 'map-menu', 'arrival']) {
       if (await _getUiFlagUseCase(key)) {
@@ -148,8 +147,9 @@ class MainMapCubit extends Cubit<MainMapState> {
     emit(
       state.copyWith(
         mode: mode,
-        isBottomSheetVisible:
-            mode == MainMapMode.city ? false : state.isBottomSheetVisible,
+        isBottomSheetVisible: mode == MainMapMode.city
+            ? false
+            : state.isBottomSheetVisible,
         activeMapActionLabel: mode == MainMapMode.routes
             ? 'Режим маршрутів'
             : 'Огляд міста',

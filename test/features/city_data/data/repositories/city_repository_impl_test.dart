@@ -4,6 +4,7 @@ import 'package:flutter_dozor_city/features/city_data/data/datasources/local/cit
 import 'package:flutter_dozor_city/features/city_data/data/datasources/remote/city_remote_data_source.dart';
 import 'package:flutter_dozor_city/features/city_data/data/repositories/city_repository_impl.dart';
 import 'package:flutter_dozor_city/core/domain/entities/arrival_info.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
@@ -18,6 +19,8 @@ class _FakeCityLocalDataSource implements CityLocalDataSource {
   final Map<String, List<TransportRoute>> routesByType = {};
   final Map<String, DateTime> routesUpdatedAt = {};
   final Map<String, List<RouteZone>> zonesByRoute = {};
+  final Map<String, List<RouteZone>> cityStopsByCity = {};
+  final Map<String, DateTime> cityStopsUpdatedAt = {};
   final Map<String, DateTime> zonesUpdatedAt = {};
   final Map<String, ArrivalInfo> arrivals = {};
   final Map<String, DateTime> arrivalsUpdatedAt = {};
@@ -26,7 +29,8 @@ class _FakeCityLocalDataSource implements CityLocalDataSource {
   Future<void> clearCityData(String cityId) async {}
 
   @override
-  Future<ArrivalInfo?> getArrivalByZone(String zoneId) async => arrivals[zoneId];
+  Future<ArrivalInfo?> getArrivalByZone(String zoneId) async =>
+      arrivals[zoneId];
 
   @override
   Future<DateTime?> getArrivalUpdatedAt(String zoneId) async =>
@@ -40,7 +44,15 @@ class _FakeCityLocalDataSource implements CityLocalDataSource {
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
- 
+
+  @override
+  Future<DateTime?> getCityStopsUpdatedAt(String cityId) async =>
+      cityStopsUpdatedAt[cityId];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async =>
+      cityStopsByCity[cityId] ?? const [];
+
   @override
   Future<DateTime?> getRouteZonesUpdatedAt(String routeId) async =>
       zonesUpdatedAt[routeId];
@@ -73,6 +85,12 @@ class _FakeCityLocalDataSource implements CityLocalDataSource {
   Future<void> saveRouteZones(String routeId, List<RouteZone> zones) async {
     zonesByRoute[routeId] = zones;
     zonesUpdatedAt[routeId] = DateTime.now();
+  }
+
+  @override
+  Future<void> saveCityStops(String cityId, List<RouteZone> stops) async {
+    cityStopsByCity[cityId] = stops;
+    cityStopsUpdatedAt[cityId] = DateTime.now();
   }
 
   @override
@@ -119,6 +137,16 @@ class _FakeCityRemoteDataSource implements CityRemoteDataSource {
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [
+    RouteZone(
+      id: 'stop-1',
+      routeId: 'route-a',
+      name: 'Зупинка 1',
+      position: AppLatLng(lat: 50.25, lng: 28.66),
+    ),
+  ];
 
   @override
   Future<List<TransportRoute>> getRoutesByType({
@@ -180,6 +208,12 @@ class _FakeSessionRepository extends SessionRepository {
   Future<void> setUiFlag(String key, bool value) async {
     _uiFlags[key] = value;
   }
+
+  @override
+  Future<String?> getMapLanguage() async => null;
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {}
 }
 
 void main() {
@@ -240,6 +274,32 @@ void main() {
 
       expect(result, cachedRoutes);
       expect(remote.routesCalls, 0);
+    });
+
+    test('returns fresh cached city stops without hitting remote', () async {
+      final local = _FakeCityLocalDataSource();
+      final cachedStops = [
+        RouteZone(
+          id: 'stop-1',
+          routeId: 'route-a',
+          name: 'Зупинка 1',
+          position: AppLatLng(lat: 50.25, lng: 28.66),
+        ),
+      ];
+      local.cityStopsByCity['zhytomyr'] = cachedStops;
+      local.cityStopsUpdatedAt['zhytomyr'] = DateTime.now();
+
+      final remote = _FakeCityRemoteDataSource();
+      final repository = CityRepositoryImpl(
+        remoteDataSource: remote,
+        localDataSource: local,
+        sessionRepository: _FakeSessionRepository(),
+        clock: const SystemClock(),
+      );
+
+      final result = await repository.getCityStops('zhytomyr');
+
+      expect(result, cachedStops);
     });
   });
 }

@@ -1,9 +1,11 @@
 import 'package:flutter_dozor_city/core/network/dio_client.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_bus_location_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_db_data_dto.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_live_data_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/batumi_points_between_stations_dto.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_bus_locs_on_route_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_db_data_request.dart';
+import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_live_data_request.dart';
 import 'package:flutter_dozor_city/features/city_data/data/batumi/requests/get_batumi_points_between_stations_request.dart';
 
 class BatumiApi {
@@ -27,6 +29,15 @@ class BatumiApi {
     GetBatumiBusLocsOnRouteRequest request,
   ) async {
     final response = await _dioClient.request(request);
-    return BatumiBusLocationsResponseDto.fromApiResponse(response.data).locations;
+    return BatumiBusLocationsResponseDto.fromApiResponse(
+      response.data,
+    ).locations;
+  }
+
+  Future<BatumiLiveDataResponseDto> getLiveData(
+    GetBatumiLiveDataRequest request,
+  ) async {
+    final response = await _dioClient.request(request);
+    return BatumiLiveDataResponseDto.fromApiResponse(response.data);
   }
 }

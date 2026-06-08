@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
+import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/repositories/session_repository.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/time/app_clock.dart';
@@ -36,6 +37,12 @@ class _FakeLocalDataSource implements CityLocalDataSource {
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
 
   @override
+  Future<DateTime?> getCityStopsUpdatedAt(String cityId) async => null;
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [];
+
+  @override
   Future<DateTime?> getRouteZonesUpdatedAt(String routeId) async => null;
 
   @override
@@ -63,6 +70,9 @@ class _FakeLocalDataSource implements CityLocalDataSource {
   Future<void> saveRouteZones(String routeId, List<RouteZone> zones) async {}
 
   @override
+  Future<void> saveCityStops(String cityId, List<RouteZone> stops) async {}
+
+  @override
   Future<void> saveRoutesByType({
     required String cityId,
     required int transportType,
@@ -73,15 +83,15 @@ class _FakeLocalDataSource implements CityLocalDataSource {
 class _FakeRemoteDataSource implements CityRemoteDataSource {
   @override
   Future<List<City>> getCities() async => const [
-        City(
-          id: 'kyiv',
-          name: 'Kyiv',
-          region: 'Kyiv',
-          centerLat: 50.45,
-          centerLng: 30.52,
-          zoom: 11,
-        ),
-      ];
+    City(
+      id: 'kyiv',
+      name: 'Kyiv',
+      region: 'Kyiv',
+      centerLat: 50.45,
+      centerLng: 30.52,
+      zoom: 11,
+    ),
+  ];
 
   @override
   Future<int> getCityDataHash(String cityId) async => 1;
@@ -96,11 +106,25 @@ class _FakeRemoteDataSource implements CityRemoteDataSource {
   Future<ArrivalInfo> getArrivalByZone({
     required String cityId,
     required String zoneId,
-  }) async =>
-      const ArrivalInfo(zoneId: 'zone', busMinutes: [], trolleyMinutes: [], tramMinutes: []);
+  }) async => const ArrivalInfo(
+    zoneId: 'zone',
+    busMinutes: [],
+    trolleyMinutes: [],
+    tramMinutes: [],
+  );
 
   @override
   Future<List<RouteZone>> getRouteZones(String routeId) async => const [];
+
+  @override
+  Future<List<RouteZone>> getCityStops(String cityId) async => const [
+    RouteZone(
+      id: 'stop-1',
+      routeId: 'route-1',
+      name: 'Зупинка 1',
+      position: AppLatLng(lat: 41.6168, lng: 41.6367),
+    ),
+  ];
 
   @override
   Future<List<TransportRoute>> getRoutesByType({
@@ -148,6 +172,12 @@ class _FakeSessionRepository extends SessionRepository {
 
   @override
   Future<void> setUiFlag(String key, bool value) async {}
+
+  @override
+  Future<String?> getMapLanguage() async => null;
+
+  @override
+  Future<void> setMapLanguage(String languageCode) async {}
 }
 
 void main() {
@@ -173,7 +203,13 @@ void main() {
 
     final cities = await repository.getCities();
 
-    expect(cities.map((city) => city.id), containsAll(['kyiv', BatumiCityCatalog.cityId]));
-    expect(local.cities.map((city) => city.id), contains(BatumiCityCatalog.cityId));
+    expect(
+      cities.map((city) => city.id),
+      containsAll(['kyiv', BatumiCityCatalog.cityId]),
+    );
+    expect(
+      local.cities.map((city) => city.id),
+      contains(BatumiCityCatalog.cityId),
+    );
   });
 }
