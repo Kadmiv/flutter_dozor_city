@@ -9,7 +9,7 @@ class ArrivalInfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
+    return BlocBuilder<MapArrivalsBloc, MapArrivalsState>(
       builder: (context, state) {
         final arrival = state.arrivalInfo;
         if (arrival == null) {

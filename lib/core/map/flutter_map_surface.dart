@@ -32,6 +32,10 @@ class FlutterMapSurface extends StatefulWidget {
     this.previewEnd,
     this.selectedRouteStatus,
     this.onMapTap,
+    this.onPreviewStartChanged,
+    this.onPreviewStartDragEnded,
+    this.onPreviewEndChanged,
+    this.onPreviewEndDragEnded,
     this.onCameraIdle,
   });
 
@@ -49,6 +53,10 @@ class FlutterMapSurface extends StatefulWidget {
   final SelectedPoint? previewEnd;
   final int? selectedRouteStatus;
   final ValueChanged<AppLatLng>? onMapTap;
+  final ValueChanged<AppLatLng>? onPreviewStartChanged;
+  final ValueChanged<AppLatLng>? onPreviewStartDragEnded;
+  final ValueChanged<AppLatLng>? onPreviewEndChanged;
+  final ValueChanged<AppLatLng>? onPreviewEndDragEnded;
   final VoidCallback? onCameraIdle;
 
   @override
@@ -56,8 +64,10 @@ class FlutterMapSurface extends StatefulWidget {
 }
 
 class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
+  final GlobalKey _mapKey = GlobalKey();
   Timer? _frameTimer;
   DateTime _frameNow = DateTime.now();
+  Offset? _lastDragPosition;
 
   @override
   void initState() {
@@ -106,6 +116,7 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
     final adapter = widget.mapController as FlutterMapControllerAdapter;
 
     return ClipRRect(
+      key: _mapKey,
       borderRadius: BorderRadius.circular(22),
       child: FlutterMap(
         mapController: adapter.mapController,
@@ -222,7 +233,38 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
           point: ll.LatLng(start.lat, start.lng),
           width: 40,
           height: 40,
-          child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanUpdate: widget.onPreviewStartChanged == null
+                ? null
+                : (details) {
+                    _lastDragPosition = details.globalPosition;
+                    final point = _latLngFromGlobalPosition(
+                      details.globalPosition,
+                    );
+                    if (point != null) {
+                      widget.onPreviewStartChanged!(point);
+                    }
+                  },
+            onPanEnd: widget.onPreviewStartDragEnded == null
+                ? null
+                : (details) {
+                    final point = _lastDragPosition == null
+                        ? null
+                        : _latLngFromGlobalPosition(_lastDragPosition!);
+                    if (point != null) {
+                      widget.onPreviewStartDragEnded!(point);
+                    }
+                    _lastDragPosition = null;
+                  },
+            onPanStart: (details) {
+              _lastDragPosition = details.globalPosition;
+            },
+            onPanDown: (details) {
+              _lastDragPosition = details.globalPosition;
+            },
+            child: const Icon(Icons.location_on, color: Colors.green, size: 40),
+          ),
         ),
       );
     }
@@ -234,12 +276,60 @@ class _FlutterMapSurfaceState extends State<FlutterMapSurface> {
           point: ll.LatLng(end.lat, end.lng),
           width: 40,
           height: 40,
-          child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanUpdate: widget.onPreviewEndChanged == null
+                ? null
+                : (details) {
+                    _lastDragPosition = details.globalPosition;
+                    final point = _latLngFromGlobalPosition(
+                      details.globalPosition,
+                    );
+                    if (point != null) {
+                      widget.onPreviewEndChanged!(point);
+                    }
+                  },
+            onPanEnd: widget.onPreviewEndDragEnded == null
+                ? null
+                : (details) {
+                    final point = _lastDragPosition == null
+                        ? null
+                        : _latLngFromGlobalPosition(_lastDragPosition!);
+                    if (point != null) {
+                      widget.onPreviewEndDragEnded!(point);
+                    }
+                    _lastDragPosition = null;
+                  },
+            onPanStart: (details) {
+              _lastDragPosition = details.globalPosition;
+            },
+            onPanDown: (details) {
+              _lastDragPosition = details.globalPosition;
+            },
+            child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+          ),
         ),
       );
     }
 
     return markers;
+  }
+
+  AppLatLng? _latLngFromGlobalPosition(Offset globalPosition) {
+    final context = _mapKey.currentContext;
+    if (context == null) {
+      return null;
+    }
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox) {
+      return null;
+    }
+    final localPosition = renderObject.globalToLocal(globalPosition);
+    final camera = (widget.mapController as FlutterMapControllerAdapter)
+        .mapController
+        .camera;
+    final latLng = camera.offsetToCrs(localPosition);
+    return AppLatLng(lat: latLng.latitude, lng: latLng.longitude);
   }
 
   List<Polyline> _buildPolylines() {

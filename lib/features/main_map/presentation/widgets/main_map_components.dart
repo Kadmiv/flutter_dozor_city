@@ -3,161 +3,128 @@
 part of '../pages/main_map_page.dart';
 
 class _LegacyTopMenu extends StatelessWidget {
-  const _LegacyTopMenu({required this.onOpenCityPicker});
+  const _LegacyTopMenu({
+    required this.onOpenCityPicker,
+    required this.onOpenStopSearch,
+  });
 
   final VoidCallback onOpenCityPicker;
+  final Future<void> Function() onOpenStopSearch;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, state) {
         final cityName = state.city?.name ?? 'Оберіть місто';
-        return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+        return BlocBuilder<MapLanguageBloc, MapLanguageState>(
           builder: (context, languageState) {
-            return BlocBuilder<MapRoutePlanningCubit, MapRoutePlanningState>(
-              builder: (context, planningState) {
-                return BlocBuilder<MapRoutesCubit, MapRoutesState>(
-                  builder: (context, routesState) {
-                    final statusLabel = switch (routesState.selectedStatus) {
-                      RouteStatusFilter.all => 'All',
-                      RouteStatusFilter.status1 => '1',
-                      RouteStatusFilter.status2 => '2',
-                      RouteStatusFilter.unknown => '?',
-                    };
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C4F7A),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
+            return BlocBuilder<MapRoutesBloc, MapRoutesState>(
+              builder: (context, routesState) {
+                final statusLabel = switch (routesState.selectedStatus) {
+                  RouteStatusFilter.all => 'All',
+                  RouteStatusFilter.status1 => '1',
+                  RouteStatusFilter.status2 => '2',
+                  RouteStatusFilter.unknown => '?',
+                };
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C4F7A),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.16),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      children: [
+                        _TopMenuChip(
+                          key: const Key('top-menu-city'),
+                          icon: Icons.location_city,
+                          label: cityName,
+                          onTap: onOpenCityPicker,
+                        ),
+                        const SizedBox(width: 8),
+                        _TopMenuChip(
+                          key: const Key('top-menu-routes'),
+                          icon: state.mode == MainMapMode.routes
+                              ? Icons.alt_route
+                              : Icons.map_outlined,
+                          label: state.mode == MainMapMode.routes
+                              ? 'Маршрути'
+                              : 'Місто',
+                          isActive: state.mode == MainMapMode.routes,
+                          onTap: () {
+                            context.read<MainMapBloc>()
+                              ..setRouteMode(MainMapMode.routes)
+                              ..openBottomSheet(
+                                tab: MainMapTab.search,
+                              );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _TopMenuChip(
+                          key: const Key('top-menu-status'),
+                          icon: Icons.tune,
+                          label: 'Статус $statusLabel',
+                          onTap: () {
+                            final next = switch (routesState.selectedStatus) {
+                              RouteStatusFilter.all =>
+                                RouteStatusFilter.status1,
+                              RouteStatusFilter.status1 =>
+                                RouteStatusFilter.status2,
+                              RouteStatusFilter.status2 =>
+                                RouteStatusFilter.unknown,
+                              RouteStatusFilter.unknown =>
+                                RouteStatusFilter.all,
+                            };
+                            context.read<MapRoutesBloc>().setStatusFilter(
+                              next,
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _TopMenuChip(
+                          key: const Key('top-menu-language'),
+                          icon: Icons.language,
+                          label:
+                              languageState.language == AppDisplayLanguage.en
+                              ? 'EN'
+                              : 'KA',
+                          onTap: () {
+                            context.read<MapLanguageBloc>().toggle();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () {
+                            unawaited(onOpenStopSearch());
+                          },
+                          icon: const Icon(
+                            Icons.search,
+                            color: Colors.white,
                           ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
+                          tooltip: 'Пошук зупинки',
                         ),
-                        child: Row(
-                          children: [
-                            _TopMenuChip(
-                              key: const Key('top-menu-city'),
-                              icon: Icons.location_city,
-                              label: cityName,
-                              onTap: onOpenCityPicker,
-                            ),
-                            const SizedBox(width: 8),
-                            _TopMenuChip(
-                              key: const Key('top-menu-routes'),
-                              icon: state.mode == MainMapMode.routes
-                                  ? Icons.alt_route
-                                  : Icons.map_outlined,
-                              label: state.mode == MainMapMode.routes
-                                  ? 'Маршрути'
-                                  : 'Місто',
-                              isActive: state.mode == MainMapMode.routes,
-                              onTap: () {
-                                context.read<MainMapCubit>().setRouteMode(
-                                  MainMapMode.routes,
-                                );
-                                context.read<MainMapCubit>().openBottomSheet(
-                                  tab: MainMapTab.search,
-                                );
-                                context.goNamed(AppRouteNames.search);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _TopMenuChip(
-                              key: const Key('top-menu-planning'),
-                              icon:
-                                  planningState.mode ==
-                                      MapRoutePlanningMode.inactive
-                                  ? Icons.route
-                                  : Icons.route_outlined,
-                              label:
-                                  planningState.mode ==
-                                      MapRoutePlanningMode.inactive
-                                  ? 'План'
-                                  : 'План A/B',
-                              isActive:
-                                  planningState.mode !=
-                                  MapRoutePlanningMode.inactive,
-                              onTap: () {
-                                if (planningState.mode ==
-                                    MapRoutePlanningMode.inactive) {
-                                  context
-                                      .read<MapRoutePlanningCubit>()
-                                      .startPlanning();
-                                  context
-                                      .read<MainMapCubit>()
-                                      .setActiveMapActionLabel(
-                                        'Обери стартову точку на мапі',
-                                      );
-                                } else {
-                                  context
-                                      .read<MapRoutePlanningCubit>()
-                                      .cancel();
-                                  context.read<RoutePreviewCubit>().clear();
-                                  context
-                                      .read<MainMapCubit>()
-                                      .setActiveMapActionLabel(
-                                        'Режим маршрутів',
-                                      );
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _TopMenuChip(
-                              key: const Key('top-menu-status'),
-                              icon: Icons.tune,
-                              label: 'Статус $statusLabel',
-                              onTap: () {
-                                final next =
-                                    switch (routesState.selectedStatus) {
-                                      RouteStatusFilter.all =>
-                                        RouteStatusFilter.status1,
-                                      RouteStatusFilter.status1 =>
-                                        RouteStatusFilter.status2,
-                                      RouteStatusFilter.status2 =>
-                                        RouteStatusFilter.unknown,
-                                      RouteStatusFilter.unknown =>
-                                        RouteStatusFilter.all,
-                                    };
-                                context.read<MapRoutesCubit>().setStatusFilter(
-                                  next,
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _TopMenuChip(
-                              key: const Key('top-menu-language'),
-                              icon: Icons.language,
-                              label:
-                                  languageState.language ==
-                                      AppDisplayLanguage.en
-                                  ? 'EN'
-                                  : 'KA',
-                              onTap: () {
-                                context.read<MapLanguageCubit>().toggle();
-                              },
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: onOpenCityPicker,
-                              icon: const Icon(
-                                Icons.sync_alt,
-                                color: Colors.white,
-                              ),
-                              tooltip: 'Змінити місто',
-                            ),
-                          ],
+                        const Spacer(),
+                        IconButton(
+                          onPressed: onOpenCityPicker,
+                          icon: const Icon(
+                            Icons.sync_alt,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'Змінити місто',
                         ),
-                      ),
-                    );
-                  },
+                      ],
+                    ),
+                  ),
                 );
               },
             );
@@ -250,12 +217,12 @@ class _SelectedRoutesWrap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+    return BlocBuilder<MapRoutesBloc, MapRoutesState>(
       builder: (context, state) {
         if (state.selectedRoutes.isEmpty) {
           return const SizedBox.shrink();
         }
-        return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+        return BlocBuilder<MapLanguageBloc, MapLanguageState>(
           builder: (context, languageState) {
             return Align(
               alignment: Alignment.topLeft,
@@ -345,309 +312,6 @@ class _SelectedRoutesWrap extends StatelessWidget {
   }
 }
 
-class _RoutePlanningPanel extends StatelessWidget {
-  const _RoutePlanningPanel({required this.state});
-
-  final MapRoutePlanningState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.14),
-                blurRadius: 20,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.route, size: 18, color: Color(0xFF1C4F7A)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Побудова маршруту',
-                        style: const TextStyle(
-                          color: Color(0xFF17324D),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () =>
-                          context.read<MapRoutePlanningCubit>().cancel(),
-                      icon: const Icon(Icons.close, size: 18),
-                      tooltip: 'Завершити',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  state.mode == MapRoutePlanningMode.selectingStart
-                      ? 'Торкніться карти, щоб вибрати старт'
-                      : state.mode == MapRoutePlanningMode.selectingEnd
-                      ? 'Торкніться карти, щоб вибрати фініш'
-                      : 'Оберіть пункти або натисніть пошук',
-                  style: TextStyle(
-                    color: Colors.black.withValues(alpha: 0.68),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RoutePointChip(
-                        label: 'Від',
-                        value: state.start?.label ?? 'Натисніть мапу',
-                        onTap: () => context
-                            .read<MapRoutePlanningCubit>()
-                            .startSelectingStart(),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _RoutePointChip(
-                        label: 'До',
-                        value: state.end?.label ?? 'Натисніть мапу',
-                        onTap: () => context
-                            .read<MapRoutePlanningCubit>()
-                            .startSelectingEnd(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: List.generate(5, (index) {
-                    final selected = state.transportTypes.contains(index);
-                    return _TransportMiniToggle(
-                      icon: _transportTypeIcon(index),
-                      selected: selected,
-                      onTap: () => context
-                          .read<MapRoutePlanningCubit>()
-                          .toggleTransportType(index),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 10),
-                if (state.isLoading)
-                  const LinearProgressIndicator(minHeight: 2),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _RoundActionButton(
-                      icon: Icons.swap_vert,
-                      onTap: () => context.read<MapRoutePlanningCubit>().swap(),
-                    ),
-                    const SizedBox(width: 8),
-                    _RoundActionButton(
-                      icon: Icons.search,
-                      onTap: () =>
-                          context.read<MapRoutePlanningCubit>().search(),
-                    ),
-                    const SizedBox(width: 8),
-                    _RoundActionButton(
-                      icon: Icons.delete_outline,
-                      onTap: () =>
-                          context.read<MapRoutePlanningCubit>().clear(),
-                    ),
-                    const Spacer(),
-                    Text(
-                      state.results.isEmpty
-                          ? '0 варіантів'
-                          : '${state.results.length} варіантів',
-                      style: const TextStyle(
-                        color: Color(0xFF17324D),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                if (state.results.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 38,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: state.results.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final result = state.results[index];
-                        final active = state.activeResult?.id == result.id;
-                        return InkWell(
-                          onTap: () => context
-                              .read<MapRoutePlanningCubit>()
-                              .selectResult(result),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Ink(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? const Color(0xFF1C4F7A)
-                                  : const Color(0xFFEAF1F8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  result.title,
-                                  style: TextStyle(
-                                    color: active
-                                        ? Colors.white
-                                        : const Color(0xFF17324D),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (result.totalTravelMinutes != null) ...[
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${result.totalTravelMinutes} хв',
-                                    style: TextStyle(
-                                      color: active
-                                          ? Colors.white.withValues(alpha: 0.86)
-                                          : const Color(0xFF1C4F7A),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-                if (state.failure != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    state.failure!.message,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RoutePointChip extends StatelessWidget {
-  const _RoutePointChip({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEAF1F8),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF1C4F7A),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFF17324D),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TransportMiniToggle extends StatelessWidget {
-  const _TransportMiniToggle({
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1C4F7A) : const Color(0xFFEAF1F8),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: selected ? Colors.white : const Color(0xFF1C4F7A),
-        ),
-      ),
-    );
-  }
-}
-
 class _RoundActionButton extends StatelessWidget {
   const _RoundActionButton({required this.icon, required this.onTap});
 
@@ -679,7 +343,7 @@ class _BottomTransportNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+    return BlocBuilder<MapRoutesBloc, MapRoutesState>(
       builder: (context, state) {
         return Center(
           child: DecoratedBox(
@@ -752,9 +416,9 @@ class _RoutesSheet extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: BlocBuilder<MapRoutesCubit, MapRoutesState>(
+            child: BlocBuilder<MapRoutesBloc, MapRoutesState>(
               builder: (context, state) {
-                return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+                return BlocBuilder<MapLanguageBloc, MapLanguageState>(
                   builder: (context, languageState) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,11 +566,11 @@ class _StopsSheet extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
+            child: BlocBuilder<MapArrivalsBloc, MapArrivalsState>(
               builder: (context, state) {
-                return BlocBuilder<MapLanguageCubit, MapLanguageState>(
+                return BlocBuilder<MapLanguageBloc, MapLanguageState>(
                   builder: (context, languageState) {
-                    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+                    return BlocBuilder<MapRoutesBloc, MapRoutesState>(
                       builder: (context, routesState) {
                         final visibleZones = state.routeZones
                             .where(
@@ -1054,7 +718,7 @@ class _MarkersMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, state) {
         return DecoratedBox(
           decoration: BoxDecoration(
@@ -1073,7 +737,7 @@ class _MarkersMenu extends StatelessWidget {
             child: Column(
               children: [
                 IconButton(
-                  onPressed: () => context.read<MainMapCubit>().toggleMarkers(),
+                  onPressed: () => context.read<MainMapBloc>().toggleMarkers(),
                   icon: Icon(
                     state.showMarkers ? Icons.visibility : Icons.visibility_off,
                     color: const Color(0xFF17324D),
@@ -1115,7 +779,7 @@ class _LocationControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LiveTrackingCubit, LiveTrackingState>(
+    return BlocBuilder<LiveTrackingBloc, LiveTrackingState>(
       builder: (context, state) {
         final decoration = BoxDecoration(
           color: const Color(0xFF1C4F7A),
@@ -1254,7 +918,7 @@ class _BottomTabSheet extends StatelessWidget {
                 alignment: Alignment.topRight,
                 child: IconButton(
                   onPressed: () =>
-                      context.read<MainMapCubit>().closeBottomSheet(),
+                      context.read<MainMapBloc>().closeBottomSheet(),
                   icon: const Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: Color(0xFF17324D),
@@ -1281,7 +945,7 @@ class _TopModeBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, state) {
         return DecoratedBox(
           decoration: BoxDecoration(
@@ -1300,10 +964,9 @@ class _TopModeBar extends StatelessWidget {
                           : null,
                     ),
                     onPressed: () {
-                      context.read<MainMapCubit>().openBottomSheet(
+                      context.read<MainMapBloc>().openBottomSheet(
                         tab: MainMapTab.search,
                       );
-                      context.goNamed(AppRouteNames.search);
                     },
                     child: const Text('Пошук'),
                   ),
@@ -1317,10 +980,9 @@ class _TopModeBar extends StatelessWidget {
                           : null,
                     ),
                     onPressed: () {
-                      context.read<MainMapCubit>().openBottomSheet(
+                      context.read<MainMapBloc>().openBottomSheet(
                         tab: MainMapTab.results,
                       );
-                      context.goNamed(AppRouteNames.results);
                     },
                     child: const Text('Результати'),
                   ),
@@ -1334,10 +996,9 @@ class _TopModeBar extends StatelessWidget {
                           : null,
                     ),
                     onPressed: () {
-                      context.read<MainMapCubit>().openBottomSheet(
+                      context.read<MainMapBloc>().openBottomSheet(
                         tab: MainMapTab.stored,
                       );
-                      context.goNamed(AppRouteNames.stored);
                     },
                     child: const Text('Збережені'),
                   ),
@@ -1351,105 +1012,16 @@ class _TopModeBar extends StatelessWidget {
   }
 }
 
-class _BottomMapActions extends StatelessWidget {
-  const _BottomMapActions();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
-      builder: (context, state) {
-        return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 220),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (state.activeMapActionLabel != null)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.96),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    state.activeMapActionLabel!,
-                    style: const TextStyle(
-                      color: Color(0xFF17324D),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C4F7A),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          context.read<MainMapCubit>().setActiveMapActionLabel(
-                            'Режим маршрутів',
-                          );
-                          context.read<MainMapCubit>().setRouteMode(
-                            MainMapMode.routes,
-                          );
-                          context.read<MainMapCubit>().selectTab(
-                            MainMapTab.search,
-                          );
-                          context.goNamed(AppRouteNames.search);
-                        },
-                        icon: const Icon(Icons.alt_route, color: Colors.white),
-                        tooltip: 'Маршрути',
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          context.read<RoutePreviewCubit>().clear();
-                          context.read<MainMapCubit>().setActiveMapActionLabel(
-                            'Preview очищено',
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.layers_clear,
-                          color: Colors.white,
-                        ),
-                        tooltip: 'Очистити preview',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _LiveStatusBanner extends StatelessWidget {
   const _LiveStatusBanner();
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, mainMapState) {
-        return BlocBuilder<MapOverlaysCubit, MapOverlaysState>(
-          builder: (context, overlaysState) {
-            return BlocBuilder<LiveTrackingCubit, LiveTrackingState>(
+        return BlocBuilder<MapRoutesBloc, MapRoutesState>(
+          builder: (context, routesState) {
+            return BlocBuilder<LiveTrackingBloc, LiveTrackingState>(
               builder: (context, trackingState) {
                 final updatedAt = trackingState.lastUpdatedAt;
                 final updatedLabel = updatedAt == null
@@ -1457,11 +1029,11 @@ class _LiveStatusBanner extends StatelessWidget {
                     : '${updatedAt.hour.toString().padLeft(2, '0')}:'
                           '${updatedAt.minute.toString().padLeft(2, '0')}:'
                           '${updatedAt.second.toString().padLeft(2, '0')}';
-                final selectedRoutes = overlaysState.selectedRoutes
+                final selectedRoutes = routesState.selectedRoutes
                     .map((route) => route.id)
                     .toSet();
                 final hasTypeScopedRoutes =
-                    overlaysState.availableRoutes.isNotEmpty;
+                    routesState.availableRoutes.isNotEmpty;
                 final visibleCount = !mainMapState.showMarkers
                     ? 0
                     : selectedRoutes.isEmpty
@@ -1470,7 +1042,7 @@ class _LiveStatusBanner extends StatelessWidget {
                                 .where(
                                   (vehicle) =>
                                       vehicle.transportType ==
-                                      overlaysState.transportType,
+                                      routesState.transportType,
                                 )
                                 .length
                           : trackingState.vehicles.length

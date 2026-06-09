@@ -1,3 +1,4 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
@@ -9,7 +10,113 @@ import 'package:flutter_dozor_city/features/route_results/domain/usecases/search
 
 enum MapRoutePlanningMode { inactive, selectingStart, selectingEnd, previewing }
 
-class MapRoutePlanningState {
+sealed class MapRoutePlanningEvent extends Equatable {
+  const MapRoutePlanningEvent();
+
+  @override
+  List<Object?> get props => const [];
+}
+
+final class MapRoutePlanningStarted extends MapRoutePlanningEvent {
+  const MapRoutePlanningStarted();
+}
+
+final class MapRoutePlanningStartSelectingStart extends MapRoutePlanningEvent {
+  const MapRoutePlanningStartSelectingStart();
+}
+
+final class MapRoutePlanningStartSelectingEnd extends MapRoutePlanningEvent {
+  const MapRoutePlanningStartSelectingEnd();
+}
+
+final class MapRoutePlanningCancelled extends MapRoutePlanningEvent {
+  const MapRoutePlanningCancelled();
+}
+
+final class MapRoutePlanningTransportTypeToggled extends MapRoutePlanningEvent {
+  const MapRoutePlanningTransportTypeToggled(this.type);
+
+  final int type;
+
+  @override
+  List<Object?> get props => [type];
+}
+
+final class MapRoutePlanningPointFromMapSet extends MapRoutePlanningEvent {
+  const MapRoutePlanningPointFromMapSet(this.point);
+
+  final AppLatLng point;
+
+  @override
+  List<Object?> get props => [point];
+}
+
+final class MapRoutePlanningStartFromMapChanged extends MapRoutePlanningEvent {
+  const MapRoutePlanningStartFromMapChanged(
+    this.point, {
+    this.commitSearch = false,
+  });
+
+  final AppLatLng point;
+  final bool commitSearch;
+
+  @override
+  List<Object?> get props => [point, commitSearch];
+}
+
+final class MapRoutePlanningEndFromMapChanged extends MapRoutePlanningEvent {
+  const MapRoutePlanningEndFromMapChanged(
+    this.point, {
+    this.commitSearch = false,
+  });
+
+  final AppLatLng point;
+  final bool commitSearch;
+
+  @override
+  List<Object?> get props => [point, commitSearch];
+}
+
+final class MapRoutePlanningStartSet extends MapRoutePlanningEvent {
+  const MapRoutePlanningStartSet(this.point);
+
+  final SelectedPoint point;
+
+  @override
+  List<Object?> get props => [point];
+}
+
+final class MapRoutePlanningEndSet extends MapRoutePlanningEvent {
+  const MapRoutePlanningEndSet(this.point);
+
+  final SelectedPoint point;
+
+  @override
+  List<Object?> get props => [point];
+}
+
+final class MapRoutePlanningSwapped extends MapRoutePlanningEvent {
+  const MapRoutePlanningSwapped();
+}
+
+final class MapRoutePlanningSearchRequested extends MapRoutePlanningEvent {
+  const MapRoutePlanningSearchRequested();
+}
+
+final class MapRoutePlanningResultSelected extends MapRoutePlanningEvent {
+  const MapRoutePlanningResultSelected(this.result);
+
+  final RouteResult result;
+
+  @override
+  List<Object?> get props => [result];
+}
+
+final class MapRoutePlanningCleared extends MapRoutePlanningEvent {
+  const MapRoutePlanningCleared();
+}
+
+class MapRoutePlanningState extends Equatable {
   const MapRoutePlanningState({
     this.mode = MapRoutePlanningMode.inactive,
     this.start,
@@ -63,39 +170,101 @@ class MapRoutePlanningState {
       failure: clearFailure ? null : (failure ?? this.failure),
     );
   }
+
+  @override
+  List<Object?> get props => [
+    mode,
+    start,
+    end,
+    transportTypes,
+    results,
+    activeResult,
+    isLoading,
+    failure,
+  ];
 }
 
-class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
-  MapRoutePlanningCubit({
+class MapRoutePlanningBloc
+    extends Bloc<MapRoutePlanningEvent, MapRoutePlanningState> {
+  MapRoutePlanningBloc({
     required SearchRoutesUseCase searchRoutesUseCase,
-    required RoutePreviewCubit routePreviewCubit,
+    required RoutePreviewBloc routePreviewBloc,
   }) : _searchRoutesUseCase = searchRoutesUseCase,
-       _routePreviewCubit = routePreviewCubit,
-       super(const MapRoutePlanningState());
+       _routePreviewBloc = routePreviewBloc,
+       super(const MapRoutePlanningState()) {
+    on<MapRoutePlanningStarted>(_onStarted);
+    on<MapRoutePlanningStartSelectingStart>(_onStartSelectingStart);
+    on<MapRoutePlanningStartSelectingEnd>(_onStartSelectingEnd);
+    on<MapRoutePlanningCancelled>(_onCancelled);
+    on<MapRoutePlanningTransportTypeToggled>(_onTransportTypeToggled);
+    on<MapRoutePlanningPointFromMapSet>(_onPointFromMapSet);
+    on<MapRoutePlanningStartFromMapChanged>(_onStartFromMapChanged);
+    on<MapRoutePlanningEndFromMapChanged>(_onEndFromMapChanged);
+    on<MapRoutePlanningStartSet>(_onStartSet);
+    on<MapRoutePlanningEndSet>(_onEndSet);
+    on<MapRoutePlanningSwapped>(_onSwapped);
+    on<MapRoutePlanningSearchRequested>(_onSearchRequested);
+    on<MapRoutePlanningResultSelected>(_onResultSelected);
+    on<MapRoutePlanningCleared>(_onCleared);
+  }
 
   final SearchRoutesUseCase _searchRoutesUseCase;
-  final RoutePreviewCubit _routePreviewCubit;
+  final RoutePreviewBloc _routePreviewBloc;
 
-  void startPlanning() {
+  void startPlanning() => add(const MapRoutePlanningStarted());
+  void startSelectingStart() =>
+      add(const MapRoutePlanningStartSelectingStart());
+  void startSelectingEnd() => add(const MapRoutePlanningStartSelectingEnd());
+  void cancel() => add(const MapRoutePlanningCancelled());
+  void toggleTransportType(int type) =>
+      add(MapRoutePlanningTransportTypeToggled(type));
+  void setPointFromMap(AppLatLng point) =>
+      add(MapRoutePlanningPointFromMapSet(point));
+  void setStartFromMap(AppLatLng point, {bool commitSearch = false}) => add(
+    MapRoutePlanningStartFromMapChanged(point, commitSearch: commitSearch),
+  );
+  void setEndFromMap(AppLatLng point, {bool commitSearch = false}) =>
+      add(MapRoutePlanningEndFromMapChanged(point, commitSearch: commitSearch));
+  void setStart(SelectedPoint point) => add(MapRoutePlanningStartSet(point));
+  void setEnd(SelectedPoint point) => add(MapRoutePlanningEndSet(point));
+  void swap() => add(const MapRoutePlanningSwapped());
+  void search() => add(const MapRoutePlanningSearchRequested());
+  void selectResult(RouteResult result) =>
+      add(MapRoutePlanningResultSelected(result));
+  void clear() => add(const MapRoutePlanningCleared());
+
+  Future<void> _onStarted(
+    MapRoutePlanningStarted event,
+    Emitter<MapRoutePlanningState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        mode: MapRoutePlanningMode.selectingStart,
+        results: const [],
+        activeResult: null,
+        isLoading: false,
+        clearFailure: true,
+      ),
+    );
+    _routePreviewBloc.add(const RoutePreviewCleared());
+  }
+
+  Future<void> _onStartSelectingStart(
+    MapRoutePlanningStartSelectingStart event,
+    Emitter<MapRoutePlanningState> emit,
+  ) async {
     emit(
       state.copyWith(
         mode: MapRoutePlanningMode.selectingStart,
         clearFailure: true,
       ),
     );
-    _routePreviewCubit.clear();
   }
 
-  void startSelectingStart() {
-    emit(
-      state.copyWith(
-        mode: MapRoutePlanningMode.selectingStart,
-        clearFailure: true,
-      ),
-    );
-  }
-
-  void startSelectingEnd() {
+  Future<void> _onStartSelectingEnd(
+    MapRoutePlanningStartSelectingEnd event,
+    Emitter<MapRoutePlanningState> emit,
+  ) async {
     emit(
       state.copyWith(
         mode: MapRoutePlanningMode.selectingEnd,
@@ -104,43 +273,53 @@ class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
     );
   }
 
-  void cancel() {
-    emit(
-      state.copyWith(mode: MapRoutePlanningMode.inactive, clearFailure: true),
-    );
-    _routePreviewCubit.clear();
+  void _onCancelled(
+    MapRoutePlanningCancelled event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
+    emit(const MapRoutePlanningState());
+    _routePreviewBloc.add(const RoutePreviewCleared());
   }
 
-  void toggleTransportType(int type) {
+  void _onTransportTypeToggled(
+    MapRoutePlanningTransportTypeToggled event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     final next = Set<int>.from(state.transportTypes);
-    if (!next.add(type)) {
-      next.remove(type);
+    if (!next.add(event.type)) {
+      next.remove(event.type);
     }
     emit(state.copyWith(transportTypes: next));
   }
 
-  void setPointFromMap(AppLatLng point) {
-    final selectedPoint = SelectedPoint(
-      label: 'Точка на мапі',
-      lat: point.lat,
-      lng: point.lng,
-      source: SelectedPointSource.mapTap,
-    );
+  void _onPointFromMapSet(
+    MapRoutePlanningPointFromMapSet event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     switch (state.mode) {
       case MapRoutePlanningMode.selectingStart:
+        final startPoint = SelectedPoint(
+          label: 'Точка на мапі',
+          lat: event.point.lat,
+          lng: event.point.lng,
+          source: SelectedPointSource.mapTap,
+        );
         emit(
           state.copyWith(
-            start: selectedPoint,
+            start: startPoint,
             mode: MapRoutePlanningMode.selectingEnd,
           ),
         );
         break;
       case MapRoutePlanningMode.selectingEnd:
+        final endPoint = SelectedPoint(
+          label: 'Точка на мапі',
+          lat: event.point.lat,
+          lng: event.point.lng,
+          source: SelectedPointSource.mapTap,
+        );
         emit(
-          state.copyWith(
-            end: selectedPoint,
-            mode: MapRoutePlanningMode.previewing,
-          ),
+          state.copyWith(end: endPoint, mode: MapRoutePlanningMode.previewing),
         );
         break;
       case MapRoutePlanningMode.previewing:
@@ -148,37 +327,84 @@ class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
         return;
     }
     if (state.start != null && state.end != null) {
-      search();
+      add(const MapRoutePlanningSearchRequested());
     }
   }
 
-  void setStart(SelectedPoint point) {
+  void _onStartFromMapChanged(
+    MapRoutePlanningStartFromMapChanged event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     emit(
       state.copyWith(
-        start: point,
+        start: SelectedPoint(
+          label: 'Точка на мапі',
+          lat: event.point.lat,
+          lng: event.point.lng,
+          source: SelectedPointSource.mapTap,
+        ),
+      ),
+    );
+    if (event.commitSearch && state.end != null) {
+      add(const MapRoutePlanningSearchRequested());
+    }
+  }
+
+  void _onEndFromMapChanged(
+    MapRoutePlanningEndFromMapChanged event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        end: SelectedPoint(
+          label: 'Точка на мапі',
+          lat: event.point.lat,
+          lng: event.point.lng,
+          source: SelectedPointSource.mapTap,
+        ),
+      ),
+    );
+    if (event.commitSearch && state.start != null) {
+      add(const MapRoutePlanningSearchRequested());
+    }
+  }
+
+  void _onStartSet(
+    MapRoutePlanningStartSet event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        start: event.point,
         mode: MapRoutePlanningMode.selectingEnd,
         clearFailure: true,
       ),
     );
     if (state.end != null) {
-      search();
+      add(const MapRoutePlanningSearchRequested());
     }
   }
 
-  void setEnd(SelectedPoint point) {
+  void _onEndSet(
+    MapRoutePlanningEndSet event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     emit(
       state.copyWith(
-        end: point,
+        end: event.point,
         mode: MapRoutePlanningMode.previewing,
         clearFailure: true,
       ),
     );
     if (state.start != null) {
-      search();
+      add(const MapRoutePlanningSearchRequested());
     }
   }
 
-  void swap() {
+  void _onSwapped(
+    MapRoutePlanningSwapped event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     emit(
       state.copyWith(
         start: state.end,
@@ -188,11 +414,14 @@ class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
       ),
     );
     if (state.start != null && state.end != null) {
-      search();
+      add(const MapRoutePlanningSearchRequested());
     }
   }
 
-  Future<void> search() async {
+  Future<void> _onSearchRequested(
+    MapRoutePlanningSearchRequested event,
+    Emitter<MapRoutePlanningState> emit,
+  ) async {
     final params = state.params;
     if (params == null) {
       return;
@@ -210,9 +439,11 @@ class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
         ),
       );
       if (activeResult != null) {
-        _routePreviewCubit.show(activeResult, searchParams: params);
+        _routePreviewBloc.add(
+          RoutePreviewShown(activeResult, searchParams: params),
+        );
       } else {
-        _routePreviewCubit.clear();
+        _routePreviewBloc.add(const RoutePreviewCleared());
       }
     } on AppFailure catch (e) {
       emit(state.copyWith(isLoading: false, failure: e));
@@ -223,21 +454,29 @@ class MapRoutePlanningCubit extends Cubit<MapRoutePlanningState> {
     }
   }
 
-  void selectResult(RouteResult result) {
+  void _onResultSelected(
+    MapRoutePlanningResultSelected event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     final params = state.params;
     emit(
       state.copyWith(
-        activeResult: result,
+        activeResult: event.result,
         mode: MapRoutePlanningMode.previewing,
       ),
     );
     if (params != null) {
-      _routePreviewCubit.show(result, searchParams: params);
+      _routePreviewBloc.add(
+        RoutePreviewShown(event.result, searchParams: params),
+      );
     }
   }
 
-  void clear() {
+  void _onCleared(
+    MapRoutePlanningCleared event,
+    Emitter<MapRoutePlanningState> emit,
+  ) {
     emit(const MapRoutePlanningState());
-    _routePreviewCubit.clear();
+    _routePreviewBloc.add(const RoutePreviewCleared());
   }
 }

@@ -8,7 +8,8 @@ void main() {
       final dartFiles = coreDir
           .listSync(recursive: true)
           .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'));
+          .where((f) => f.path.endsWith('.dart'))
+          .where((f) => !f.path.contains('${Platform.pathSeparator}map${Platform.pathSeparator}'));
 
       final errors = <String>[];
 

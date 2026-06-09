@@ -55,7 +55,7 @@ class _FakeCityRepository implements CityRepository {
 
 void main() {
   test('loads and resets city stops', () async {
-    final cubit = MapStopsCubit(
+    final cubit = MapStopsBloc(
       getCityStopsUseCase: GetCityStopsUseCase(_FakeCityRepository()),
     );
 

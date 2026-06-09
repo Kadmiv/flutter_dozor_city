@@ -1,3 +1,4 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
 import 'package:flutter_dozor_city/core/domain/entities/search_params.dart';
@@ -5,7 +6,28 @@ import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
 import 'package:flutter_dozor_city/features/route_preview/domain/usecases/build_preview_camera_use_case.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 
-class RoutePreviewState {
+sealed class RoutePreviewEvent extends Equatable {
+  const RoutePreviewEvent();
+
+  @override
+  List<Object?> get props => const [];
+}
+
+final class RoutePreviewShown extends RoutePreviewEvent {
+  const RoutePreviewShown(this.routeResult, {this.searchParams});
+
+  final RouteResult routeResult;
+  final SearchParams? searchParams;
+
+  @override
+  List<Object?> get props => [routeResult, searchParams];
+}
+
+final class RoutePreviewCleared extends RoutePreviewEvent {
+  const RoutePreviewCleared();
+}
+
+class RoutePreviewState extends Equatable {
   const RoutePreviewState({
     this.route,
     this.camera,
@@ -17,6 +39,9 @@ class RoutePreviewState {
   final AppMapCamera? camera;
   final SelectedPoint? start;
   final SelectedPoint? end;
+
+  @override
+  List<Object?> get props => [route, camera, start, end];
 
   RoutePreviewState copyWith({
     RouteResult? route,
@@ -36,19 +61,29 @@ class RoutePreviewState {
   }
 }
 
-class RoutePreviewCubit extends Cubit<RoutePreviewState> {
-  RoutePreviewCubit({
+class RoutePreviewBloc extends Bloc<RoutePreviewEvent, RoutePreviewState> {
+  RoutePreviewBloc({
     BuildPreviewCameraUseCase buildPreviewCameraUseCase =
         const BuildPreviewCameraUseCase(),
   })  : _buildPreviewCameraUseCase = buildPreviewCameraUseCase,
-        super(const RoutePreviewState());
+        super(const RoutePreviewState()) {
+    on<RoutePreviewShown>(_onShown);
+    on<RoutePreviewCleared>(_onCleared);
+  }
 
   final BuildPreviewCameraUseCase _buildPreviewCameraUseCase;
 
-  void show(
-    RouteResult routeResult, {
-    SearchParams? searchParams,
-  }) {
+  void show(RouteResult routeResult, {SearchParams? searchParams}) {
+    add(RoutePreviewShown(routeResult, searchParams: searchParams));
+  }
+
+  void clear() {
+    add(const RoutePreviewCleared());
+  }
+
+  void _onShown(RoutePreviewShown event, Emitter<RoutePreviewState> emit) {
+    final routeResult = event.routeResult;
+    final searchParams = event.searchParams;
     emit(
       state.copyWith(
         route: routeResult,
@@ -62,7 +97,10 @@ class RoutePreviewCubit extends Cubit<RoutePreviewState> {
     );
   }
 
-  void clear() {
+  void _onCleared(
+    RoutePreviewCleared event,
+    Emitter<RoutePreviewState> emit,
+  ) {
     emit(
       state.copyWith(
         clearRoute: true,

@@ -8,7 +8,7 @@ class RoutePreviewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<RoutePreviewCubit, RoutePreviewState>(
+    return BlocBuilder<RoutePreviewBloc, RoutePreviewState>(
       builder: (context, state) {
         final previewRoute = state.route;
         if (previewRoute == null) {
@@ -84,7 +84,9 @@ class RoutePreviewPanel extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => context.read<RoutePreviewCubit>().clear(),
+                onPressed: () => context
+                    .read<RoutePreviewBloc>()
+                    .add(const RoutePreviewCleared()),
                 icon: const Icon(Icons.close, color: Colors.white),
               ),
             ],

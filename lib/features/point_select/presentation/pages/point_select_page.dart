@@ -6,22 +6,32 @@ import 'package:flutter_dozor_city/features/point_select/presentation/bloc/point
 class PointSelectPage extends StatelessWidget {
   const PointSelectPage({super.key, required this.cubit});
 
-  final PointSelectCubit cubit;
+  final PointSelectBloc cubit;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: cubit,
-      child: Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+      child: BlocListener<PointSelectBloc, PointSelectState>(
+        listenWhen: (previous, current) =>
+            previous.selectedPoint != current.selectedPoint &&
+            current.selectedPoint != null,
+        listener: (context, state) {
+          final point = state.selectedPoint;
+          if (point != null && context.mounted) {
+            Navigator.of(context).pop(point);
+          }
+        },
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Row(
                   children: [
                     Container(
@@ -85,13 +95,10 @@ class PointSelectPage extends StatelessWidget {
                 _ActionRow(
                   icon: Icons.my_location,
                   label: 'Моє місце',
-                  onTap: () async {
-                    final point =
-                        await context.read<PointSelectCubit>().useCurrentLocation();
-                    if (!context.mounted) {
-                      return;
-                    }
-                    Navigator.of(context).pop(point);
+                  onTap: () {
+                    context
+                        .read<PointSelectBloc>()
+                        .add(const PointSelectCurrentLocationRequested());
                   },
                 ),
                 const SizedBox(height: 10),
@@ -110,13 +117,15 @@ class PointSelectPage extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   ),
                   onChanged: (value) =>
-                      context.read<PointSelectCubit>().search(value),
+                      context
+                          .read<PointSelectBloc>()
+                          .add(PointSelectQueryChanged(value)),
                 ),
                 const SizedBox(height: 10),
                 Flexible(
                   child: SizedBox(
                     width: double.infinity,
-                    child: BlocBuilder<PointSelectCubit, PointSelectState>(
+                    child: BlocBuilder<PointSelectBloc, PointSelectState>(
                       builder: (context, state) {
                         if (state.isLoading) {
                           return const Center(
@@ -147,7 +156,9 @@ class PointSelectPage extends StatelessWidget {
                             };
                             return InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => Navigator.of(context).pop(point),
+                              onTap: () => context
+                                  .read<PointSelectBloc>()
+                                  .add(PointSelectSuggestionSelected(point)),
                               child: Ink(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -215,7 +226,8 @@ class PointSelectPage extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

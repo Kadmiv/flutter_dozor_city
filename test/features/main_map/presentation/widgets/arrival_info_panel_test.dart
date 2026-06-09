@@ -87,7 +87,7 @@ void main() {
         ],
       ),
     );
-    final cubit = MapArrivalsCubit(
+    final cubit = MapArrivalsBloc(
       getRouteZonesUseCase: GetRouteZonesUseCase(repository),
       getArrivalByZoneUseCase: GetArrivalByZoneUseCase(repository),
       pollingScheduler: FakePollingScheduler(),
@@ -125,7 +125,7 @@ void main() {
         tramMinutes: [],
       ),
     );
-    final cubit = MapArrivalsCubit(
+    final cubit = MapArrivalsBloc(
       getRouteZonesUseCase: GetRouteZonesUseCase(repository),
       getArrivalByZoneUseCase: GetArrivalByZoneUseCase(repository),
       pollingScheduler: FakePollingScheduler(),

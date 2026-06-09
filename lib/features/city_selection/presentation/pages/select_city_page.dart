@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 class SelectCityPage extends StatefulWidget {
   const SelectCityPage({super.key, required this.cubit});
 
-  final CitySelectionCubit cubit;
+  final CitySelectionBloc cubit;
 
   @override
   State<SelectCityPage> createState() => _SelectCityPageState();
@@ -18,7 +18,7 @@ class _SelectCityPageState extends State<SelectCityPage> {
   @override
   void initState() {
     super.initState();
-    widget.cubit.loadCities();
+    widget.cubit.add(const CitySelectionStarted());
   }
 
   @override
@@ -27,15 +27,15 @@ class _SelectCityPageState extends State<SelectCityPage> {
       value: widget.cubit,
       child: MultiBlocListener(
         listeners: [
-          BlocListener<CitySelectionCubit, CitySelectionState>(
+          BlocListener<CitySelectionBloc, CitySelectionState>(
             listenWhen: (previous, current) =>
-                previous.selectedCity != current.selectedCity &&
-                current.selectedCity != null,
+                previous.submissionSucceeded != current.submissionSucceeded &&
+                current.submissionSucceeded,
             listener: (context, state) {
               context.goNamed(AppRouteNames.search);
             },
           ),
-          BlocListener<CitySelectionCubit, CitySelectionState>(
+          BlocListener<CitySelectionBloc, CitySelectionState>(
             listenWhen: (previous, current) =>
                 previous.failure != current.failure && current.failure != null,
             listener: (context, state) {

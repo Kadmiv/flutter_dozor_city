@@ -34,7 +34,7 @@ class _CityPickerContentState extends State<CityPickerContent> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CitySelectionCubit, CitySelectionState>(
+    return BlocBuilder<CitySelectionBloc, CitySelectionState>(
       builder: (context, state) {
         if (state.isLoading) {
           return const Center(child: CircularProgressIndicator());
@@ -130,9 +130,11 @@ class _CityPickerContentState extends State<CityPickerContent> {
                                     await onCityTap(context, city);
                                     return;
                                   }
-                                  await context.read<CitySelectionCubit>().selectCity(city);
+                                  context
+                                      .read<CitySelectionBloc>()
+                                      .add(CitySelectionSubmitted(city));
                                 },
-                        );
+                          );
                       },
                       separatorBuilder: (_, index) => const SizedBox(height: 8),
                       itemCount: filteredCities.length,

@@ -12,11 +12,11 @@ class RouteSearchPage extends StatefulWidget {
   const RouteSearchPage({
     super.key,
     required this.cubit,
-    required this.createPointSelectCubit,
+    required this.createPointSelectBloc,
   });
 
-  final RouteSearchCubit cubit;
-  final PointSelectCubit Function() createPointSelectCubit;
+  final RouteSearchBloc cubit;
+  final PointSelectBloc Function() createPointSelectBloc;
 
   @override
   State<RouteSearchPage> createState() => _RouteSearchPageState();
@@ -26,126 +26,139 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
   @override
   void initState() {
     super.initState();
-    widget.cubit.loadDraft();
+    widget.cubit.add(const RouteSearchDraftRequested());
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: widget.cubit,
-      child: BlocBuilder<RouteSearchCubit, RouteSearchState>(
-        builder: (context, state) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: Colors.black.withValues(alpha: 0.06),
+      child: BlocListener<RouteSearchBloc, RouteSearchState>(
+        listenWhen: (previous, current) =>
+            previous.validParams != current.validParams &&
+            current.validParams != null,
+        listener: (context, state) {
+          final params = state.validParams;
+          if (params == null) {
+            return;
+          }
+          context.goNamed(
+            AppRouteNames.results,
+            extra: RouteResultsArgs(params),
+          );
+        },
+        child: BlocBuilder<RouteSearchBloc, RouteSearchState>(
+          builder: (context, state) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.06),
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 10, 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 10, 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _LegacyPointRow(
+                                  label: 'Від',
+                                  value: state.start?.label ??
+                                      'Натисніть щоб обрати адресу',
+                                  onTap: () => _pickPoint(
+                                    context,
+                                    isStart: true,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _LegacyPointRow(
+                                  label: 'До',
+                                  value: state.end?.label ??
+                                      'Натисніть щоб обрати адресу',
+                                  onTap: () => _pickPoint(
+                                    context,
+                                    isStart: false,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: List.generate(5, (index) {
+                                    final icon = switch (index) {
+                                      0 => Icons.directions_bus,
+                                      1 => Icons.tram,
+                                      2 => Icons.electric_bolt,
+                                      3 => Icons.directions_railway,
+                                      _ => Icons.route,
+                                    };
+                                    return _LegacyTransportToggle(
+                                      icon: icon,
+                                      selected:
+                                          state.transportTypes.contains(index),
+                                      onTap: () => context.read<RouteSearchBloc>().add(
+                                        RouteSearchTransportTypeToggled(index),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
                             children: [
-                              _LegacyPointRow(
-                                label: 'Від',
-                                value: state.start?.label ??
-                                    'Натисніть щоб обрати адресу',
-                                onTap: () => _pickPoint(context, isStart: true),
+                              _SideActionButton(
+                                icon: Icons.swap_vert,
+                                onTap: () => context
+                                    .read<RouteSearchBloc>()
+                                    .add(const RouteSearchSwapped()),
                               ),
-                              const SizedBox(height: 8),
-                              _LegacyPointRow(
-                                label: 'До',
-                                value: state.end?.label ??
-                                    'Натисніть щоб обрати адресу',
-                                onTap: () =>
-                                    _pickPoint(context, isStart: false),
-                              ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: List.generate(5, (index) {
-                                  final icon = switch (index) {
-                                    0 => Icons.directions_bus,
-                                    1 => Icons.tram,
-                                    2 => Icons.electric_bolt,
-                                    3 => Icons.directions_railway,
-                                    _ => Icons.route,
-                                  };
-                                  return _LegacyTransportToggle(
-                                    icon: icon,
-                                    selected:
-                                        state.transportTypes.contains(index),
-                                    onTap: () => context
-                                        .read<RouteSearchCubit>()
-                                        .toggleTransportType(index),
-                                  );
-                                }),
+                              const SizedBox(height: 6),
+                              _SideActionButton(
+                                icon: Icons.search,
+                                onTap: () => context
+                                    .read<RouteSearchBloc>()
+                                    .add(const RouteSearchSubmitted()),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          children: [
-                            _SideActionButton(
-                              icon: Icons.swap_vert,
-                              onTap: () =>
-                                  context.read<RouteSearchCubit>().swap(),
-                            ),
-                            const SizedBox(height: 6),
-                            _SideActionButton(
-                              icon: Icons.search,
-                              onTap: () {
-                                final params =
-                                    context.read<RouteSearchCubit>().validate();
-                                if (params == null) {
-                                  return;
-                                }
-                                context.goNamed(
-                                  AppRouteNames.results,
-                                  extra: RouteResultsArgs(params),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (state.errorText != null) ...[
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      state.errorText!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.w700,
+                        ],
                       ),
                     ),
                   ),
+                  if (state.errorText != null) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        state.errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Future<void> _pickPoint(BuildContext context, {required bool isStart}) async {
-    final pointSelectCubit = widget.createPointSelectCubit();
+    final pointSelectCubit = widget.createPointSelectBloc();
     final point = await showDialog<SelectedPoint>(
       context: context,
       builder: (_) => PointSelectPage(
@@ -158,11 +171,11 @@ class _RouteSearchPageState extends State<RouteSearchPage> {
       return;
     }
 
-    final cubit = context.read<RouteSearchCubit>();
+    final cubit = context.read<RouteSearchBloc>();
     if (isStart) {
-      cubit.setStart(point);
+      cubit.add(RouteSearchStartChanged(point));
     } else {
-      cubit.setEnd(point);
+      cubit.add(RouteSearchEndChanged(point));
     }
   }
 }

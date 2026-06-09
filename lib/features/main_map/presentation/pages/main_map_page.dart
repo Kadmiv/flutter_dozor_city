@@ -7,23 +7,19 @@ import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/domain/entities/vehicle.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
 import 'package:flutter_dozor_city/core/map/map_controller.dart';
-import 'package:flutter_dozor_city/core/router/app_route_names.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_status_filter.dart';
 import 'package:flutter_dozor_city/features/live_tracking/domain/entities/animated_vehicle.dart';
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
-import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/widgets/map_overlays/arrival_popup_sheet.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/widgets/map_state_listener.dart';
-import 'package:flutter_dozor_city/features/route_preview/presentation/bloc/route_preview_cubit.dart';
 import 'package:flutter_dozor_city/features/route_preview/presentation/widgets/route_preview_map_layer.dart';
 import 'package:flutter_dozor_city/features/route_preview/presentation/widgets/route_preview_panel.dart';
-import 'package:go_router/go_router.dart';
 
 part '../widgets/main_map_components.dart';
 
@@ -34,6 +30,7 @@ class MainMapPage extends StatelessWidget {
     required this.onOpenCityPicker,
     required this.onOpenRoutesSheet,
     required this.onOpenStopsSheet,
+    required this.onOpenStopSearch,
     required this.onRemoveSelectedRoute,
     required this.onOpenVehicleSheet,
     required this.child,
@@ -43,6 +40,7 @@ class MainMapPage extends StatelessWidget {
   final VoidCallback onOpenCityPicker;
   final ValueChanged<int> onOpenRoutesSheet;
   final ValueChanged<TransportRoute> onOpenStopsSheet;
+  final Future<void> Function() onOpenStopSearch;
   final Future<void> Function(TransportRoute route) onRemoveSelectedRoute;
   final ValueChanged<Vehicle> onOpenVehicleSheet;
   final Widget child;
@@ -59,6 +57,7 @@ class MainMapPage extends StatelessWidget {
             onOpenCityPicker: onOpenCityPicker,
             onOpenRoutesSheet: onOpenRoutesSheet,
             onOpenStopsSheet: onOpenStopsSheet,
+            onOpenStopSearch: onOpenStopSearch,
             onRemoveSelectedRoute: onRemoveSelectedRoute,
             onOpenVehicleSheet: onOpenVehicleSheet,
             child: child,
@@ -75,6 +74,7 @@ class _MapShell extends StatelessWidget {
     required this.onOpenCityPicker,
     required this.onOpenRoutesSheet,
     required this.onOpenStopsSheet,
+    required this.onOpenStopSearch,
     required this.onRemoveSelectedRoute,
     required this.onOpenVehicleSheet,
     required this.child,
@@ -84,27 +84,28 @@ class _MapShell extends StatelessWidget {
   final VoidCallback onOpenCityPicker;
   final ValueChanged<int> onOpenRoutesSheet;
   final ValueChanged<TransportRoute> onOpenStopsSheet;
+  final Future<void> Function() onOpenStopSearch;
   final Future<void> Function(TransportRoute route) onRemoveSelectedRoute;
   final ValueChanged<Vehicle> onOpenVehicleSheet;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, state) {
         return Stack(
           children: [
             Positioned.fill(
-              child: BlocBuilder<MainMapCubit, MainMapState>(
+              child: BlocBuilder<MainMapBloc, MainMapState>(
                 builder: (context, mainMapState) {
-                  return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+                  return BlocBuilder<MapRoutesBloc, MapRoutesState>(
                     builder: (context, routesState) {
-                      return BlocBuilder<LiveTrackingCubit, LiveTrackingState>(
+                      return BlocBuilder<LiveTrackingBloc, LiveTrackingState>(
                         builder: (context, trackingState) {
-                          return BlocBuilder<MapStopsCubit, MapStopsState>(
+                          return BlocBuilder<MapStopsBloc, MapStopsState>(
                             builder: (context, stopsState) {
                               return BlocBuilder<
-                                MapRoutePlanningCubit,
+                                MapRoutePlanningBloc,
                                 MapRoutePlanningState
                               >(
                                 builder: (context, planningState) {
@@ -188,11 +189,11 @@ class _MapShell extends StatelessWidget {
                                         return;
                                       }
                                       final arrivalsCubit = context
-                                          .read<MapArrivalsCubit>();
+                                          .read<MapArrivalsBloc>();
                                       final mainMapCubit = context
-                                          .read<MainMapCubit>();
+                                          .read<MainMapBloc>();
                                       final language = context
-                                          .read<MapLanguageCubit>()
+                                          .read<MapLanguageBloc>()
                                           .state
                                           .language;
                                       unawaited(
@@ -225,12 +226,48 @@ class _MapShell extends StatelessWidget {
                                         return;
                                       }
                                       context
-                                          .read<MapRoutePlanningCubit>()
+                                          .read<MapRoutePlanningBloc>()
                                           .setPointFromMap(point);
                                     },
+                                    onPreviewStartChanged:
+                                        planningState.mode ==
+                                            MapRoutePlanningMode.inactive
+                                        ? null
+                                        : (point) => context
+                                              .read<MapRoutePlanningBloc>()
+                                              .setStartFromMap(point),
+                                    onPreviewStartDragEnded:
+                                        planningState.mode ==
+                                            MapRoutePlanningMode.inactive
+                                        ? null
+                                        : (point) => context
+                                              .read<MapRoutePlanningBloc>()
+                                              .setStartFromMap(
+                                                point,
+                                                commitSearch: true,
+                                              ),
+                                    onPreviewEndChanged:
+                                        planningState.mode ==
+                                            MapRoutePlanningMode.inactive
+                                        ? null
+                                        : (point) => context
+                                              .read<MapRoutePlanningBloc>()
+                                              .setEndFromMap(point),
+                                    onPreviewEndDragEnded:
+                                        planningState.mode ==
+                                            MapRoutePlanningMode.inactive
+                                        ? null
+                                        : (point) => context
+                                              .read<MapRoutePlanningBloc>()
+                                              .setEndFromMap(
+                                                point,
+                                                commitSearch: true,
+                                              ),
+                                    previewStart: planningState.start,
+                                    previewEnd: planningState.end,
                                     onCameraIdle: () {
                                       final camera = mapController.camera;
-                                      context.read<MainMapCubit>().saveCamera(
+                                      context.read<MainMapBloc>().saveCamera(
                                         AppMapCamera(
                                           centerLat: camera.centerLat,
                                           centerLng: camera.centerLng,
@@ -261,7 +298,10 @@ class _MapShell extends StatelessWidget {
               top: 12,
               left: 12,
               right: 12,
-              child: _LegacyTopMenu(onOpenCityPicker: onOpenCityPicker),
+              child: _LegacyTopMenu(
+                onOpenCityPicker: onOpenCityPicker,
+                onOpenStopSearch: onOpenStopSearch,
+              ),
             ),
             if (!state.dismissedHints.contains('select-city'))
               Positioned(
@@ -271,32 +311,25 @@ class _MapShell extends StatelessWidget {
                   message: 'Оберіть місто або змініть його тут',
                   direction: _HintDirection.topRight,
                   onClose: () =>
-                      context.read<MainMapCubit>().dismissHint('select-city'),
+                      context.read<MainMapBloc>().dismissHint('select-city'),
                 ),
               ),
-            Positioned(
-              top: 104,
-              left: 12,
-              right: 12,
-              child: BlocBuilder<MapRoutePlanningCubit, MapRoutePlanningState>(
-                builder: (context, planningState) {
-                  if (planningState.mode == MapRoutePlanningMode.inactive) {
-                    return const SizedBox.shrink();
-                  }
-                  return _RoutePlanningPanel(state: planningState);
-                },
-              ),
+            BlocBuilder<MapRoutePlanningBloc, MapRoutePlanningState>(
+              builder: (context, planningState) {
+                if (state.mode != MainMapMode.routes) {
+                  return const SizedBox.shrink();
+                }
+                return Positioned(
+                  top: 104,
+                  left: 12,
+                  right: 96,
+                  child: _SelectedRoutesWrap(
+                    onRouteTap: onOpenStopsSheet,
+                    onRouteRemove: onRemoveSelectedRoute,
+                  ),
+                );
+              },
             ),
-            if (state.mode == MainMapMode.routes)
-              Positioned(
-                top: 174,
-                left: 12,
-                right: 96,
-                child: _SelectedRoutesWrap(
-                  onRouteTap: onOpenStopsSheet,
-                  onRouteRemove: onRemoveSelectedRoute,
-                ),
-              ),
             // const Positioned(top: 74, right: 12, child: _MarkersMenu()),
             if (!state.dismissedHints.contains('map-menu') &&
                 state.mode == MainMapMode.routes)
@@ -307,7 +340,7 @@ class _MapShell extends StatelessWidget {
                   message: 'Оберіть тип транспорту та маршрут на мапі',
                   direction: _HintDirection.topLeft,
                   onClose: () =>
-                      context.read<MainMapCubit>().dismissHint('map-menu'),
+                      context.read<MainMapBloc>().dismissHint('map-menu'),
                 ),
               ),
             // const Positioned(
@@ -323,12 +356,12 @@ class _MapShell extends StatelessWidget {
             if (!state.dismissedHints.contains('arrival'))
               Positioned(
                 left: 18,
-                bottom: 496,
+                bottom: 556,
                 child: _HintBubble(
                   message: 'Тут з’являється прогноз прибуття по зупинці',
                   direction: _HintDirection.bottomLeft,
                   onClose: () =>
-                      context.read<MainMapCubit>().dismissHint('arrival'),
+                      context.read<MainMapBloc>().dismissHint('arrival'),
                 ),
               ),
             if (state.mode == MainMapMode.routes)

@@ -27,6 +27,10 @@ class AppMapSurface extends StatelessWidget {
     this.previewEnd,
     this.selectedRouteStatus,
     this.onMapTap,
+    this.onPreviewStartChanged,
+    this.onPreviewStartDragEnded,
+    this.onPreviewEndChanged,
+    this.onPreviewEndDragEnded,
     this.onCameraIdle,
   });
 
@@ -44,6 +48,10 @@ class AppMapSurface extends StatelessWidget {
   final SelectedPoint? previewEnd;
   final int? selectedRouteStatus;
   final ValueChanged<AppLatLng>? onMapTap;
+  final ValueChanged<AppLatLng>? onPreviewStartChanged;
+  final ValueChanged<AppLatLng>? onPreviewStartDragEnded;
+  final ValueChanged<AppLatLng>? onPreviewEndChanged;
+  final ValueChanged<AppLatLng>? onPreviewEndDragEnded;
   final VoidCallback? onCameraIdle;
 
   @override
@@ -65,6 +73,10 @@ class AppMapSurface extends StatelessWidget {
           previewEnd: previewEnd,
           selectedRouteStatus: selectedRouteStatus,
           onMapTap: onMapTap,
+          onPreviewStartChanged: onPreviewStartChanged,
+          onPreviewStartDragEnded: onPreviewStartDragEnded,
+          onPreviewEndChanged: onPreviewEndChanged,
+          onPreviewEndDragEnded: onPreviewEndDragEnded,
           onCameraIdle: onCameraIdle != null ? (_) => onCameraIdle!() : null,
         );
       case AppMapProvider.openStreetMap:
@@ -83,6 +95,10 @@ class AppMapSurface extends StatelessWidget {
           previewEnd: previewEnd,
           selectedRouteStatus: selectedRouteStatus,
           onMapTap: onMapTap,
+          onPreviewStartChanged: onPreviewStartChanged,
+          onPreviewStartDragEnded: onPreviewStartDragEnded,
+          onPreviewEndChanged: onPreviewEndChanged,
+          onPreviewEndDragEnded: onPreviewEndDragEnded,
           onCameraIdle: onCameraIdle,
         );
     }

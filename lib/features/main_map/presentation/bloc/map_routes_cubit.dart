@@ -1,12 +1,83 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_status_filter.dart';
 import 'package:flutter_dozor_city/core/error/failures.dart';
-import 'package:flutter_dozor_city/core/domain/entities/selected_map_routes.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/get_routes_by_type_use_case.dart';
 import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_session_use_cases.dart';
 
-class MapRoutesState {
+sealed class MapRoutesEvent extends Equatable {
+  const MapRoutesEvent();
+
+  @override
+  List<Object?> get props => const [];
+}
+
+final class MapRoutesRestored extends MapRoutesEvent {
+  const MapRoutesRestored(this.cityId);
+
+  final String cityId;
+
+  @override
+  List<Object?> get props => [cityId];
+}
+
+final class MapTransportTypeSelected extends MapRoutesEvent {
+  const MapTransportTypeSelected(this.cityId, this.type);
+
+  final String cityId;
+  final int type;
+
+  @override
+  List<Object?> get props => [cityId, type];
+}
+
+final class MapRouteSelected extends MapRoutesEvent {
+  const MapRouteSelected(this.cityId, this.route);
+
+  final String cityId;
+  final TransportRoute route;
+
+  @override
+  List<Object?> get props => [cityId, route];
+}
+
+final class MapActiveRouteSelected extends MapRoutesEvent {
+  const MapActiveRouteSelected(this.cityId, this.route);
+
+  final String cityId;
+  final TransportRoute route;
+
+  @override
+  List<Object?> get props => [cityId, route];
+}
+
+final class MapRouteRemoved extends MapRoutesEvent {
+  const MapRouteRemoved(this.routeId);
+
+  final String routeId;
+
+  @override
+  List<Object?> get props => [routeId];
+}
+
+final class MapStatusFilterChanged extends MapRoutesEvent {
+  const MapStatusFilterChanged(this.statusFilter);
+
+  final RouteStatusFilter statusFilter;
+
+  @override
+  List<Object?> get props => [statusFilter];
+}
+
+final class MapRoutesResetRequested extends MapRoutesEvent {
+  const MapRoutesResetRequested();
+}
+
+class MapRoutesState extends Equatable {
   const MapRoutesState({
     this.transportType = 0,
     this.availableRoutes = const [],
@@ -61,17 +132,37 @@ class MapRoutesState {
       failure: clearFailure ? null : (failure ?? this.failure),
     );
   }
+
+  @override
+  List<Object?> get props => [
+    transportType,
+    availableRoutes,
+    selectedRoutes,
+    selectedStatus,
+    activeCityId,
+    activeRouteId,
+    isLoading,
+    failure,
+  ];
 }
 
-class MapRoutesCubit extends Cubit<MapRoutesState> {
-  MapRoutesCubit({
+class MapRoutesBloc extends Bloc<MapRoutesEvent, MapRoutesState> {
+  MapRoutesBloc({
     required GetRoutesByTypeUseCase getRoutesByTypeUseCase,
     required GetSelectedMapRoutesUseCase getSelectedMapRoutesUseCase,
     required SaveSelectedMapRoutesUseCase saveSelectedMapRoutesUseCase,
-  }) : _getRoutesByTypeUseCase = getRoutesByTypeUseCase,
-       _getSelectedMapRoutesUseCase = getSelectedMapRoutesUseCase,
-       _saveSelectedMapRoutesUseCase = saveSelectedMapRoutesUseCase,
-       super(const MapRoutesState());
+  })  : _getRoutesByTypeUseCase = getRoutesByTypeUseCase,
+        _getSelectedMapRoutesUseCase = getSelectedMapRoutesUseCase,
+        _saveSelectedMapRoutesUseCase = saveSelectedMapRoutesUseCase,
+        super(const MapRoutesState()) {
+    on<MapRoutesRestored>(_onRestored);
+    on<MapTransportTypeSelected>(_onTransportTypeSelected);
+    on<MapRouteSelected>(_onRouteSelected);
+    on<MapActiveRouteSelected>(_onActiveRouteSelected);
+    on<MapRouteRemoved>(_onRouteRemoved);
+    on<MapStatusFilterChanged>(_onStatusFilterChanged);
+    on<MapRoutesResetRequested>(_onResetRequested);
+  }
 
   final GetRoutesByTypeUseCase _getRoutesByTypeUseCase;
   final GetSelectedMapRoutesUseCase _getSelectedMapRoutesUseCase;
@@ -103,9 +194,7 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       cityId: cityId,
       transportType: type,
       selectedRouteIds: keepCurrentSelection
-          ? state.selectedRoutes
-                .map((route) => route.id)
-                .toList(growable: false)
+          ? state.selectedRoutes.map((route) => route.id).toList(growable: false)
           : const [],
       activeRouteId: keepCurrentSelection ? state.activeRouteId : null,
     );
@@ -147,7 +236,6 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       await selectRoute(cityId: cityId, route: route);
       return;
     }
-
     emit(state.copyWith(activeCityId: cityId, activeRouteId: route.id));
     await _persistSelection();
   }
@@ -192,6 +280,128 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
   }
 
   void reset() {
+    emit(const MapRoutesState());
+  }
+
+  Future<void> _onRestored(
+    MapRoutesRestored event,
+    Emitter<MapRoutesState> emit,
+  ) async {
+    final selectedMapRoutes = await _getSelectedMapRoutesUseCase(event.cityId);
+    final transportType =
+        selectedMapRoutes?.transportType ?? state.transportType;
+    await _loadRoutes(
+      cityId: event.cityId,
+      transportType: transportType,
+      selectedRouteIds: selectedMapRoutes?.selectedRouteIds ?? const [],
+      activeRouteId: selectedMapRoutes?.activeRouteId,
+    );
+  }
+
+  Future<void> _onTransportTypeSelected(
+    MapTransportTypeSelected event,
+    Emitter<MapRoutesState> emit,
+  ) async {
+    final keepCurrentSelection =
+        state.activeCityId == event.cityId && state.transportType == event.type;
+    await _loadRoutes(
+      cityId: event.cityId,
+      transportType: event.type,
+      selectedRouteIds: keepCurrentSelection
+          ? state.selectedRoutes.map((route) => route.id).toList(growable: false)
+          : const [],
+      activeRouteId: keepCurrentSelection ? state.activeRouteId : null,
+    );
+    await _persistSelection(
+      selectedRoutes: keepCurrentSelection ? state.selectedRoutes : const [],
+      activeRouteId: keepCurrentSelection ? state.activeRouteId : null,
+    );
+  }
+
+  Future<void> _onRouteSelected(
+    MapRouteSelected event,
+    Emitter<MapRoutesState> emit,
+  ) async {
+    final isSelected = state.selectedRoutes.contains(event.route);
+    final isActive = state.activeRouteId == event.route.id;
+    if (isSelected && isActive) {
+      add(MapRouteRemoved(event.route.id));
+      return;
+    }
+    emit(
+      state.copyWith(
+        activeCityId: event.cityId,
+        activeRouteId: event.route.id,
+        selectedRoutes: isSelected
+            ? state.selectedRoutes
+            : [...state.selectedRoutes, event.route],
+      ),
+    );
+    await _persistSelection();
+  }
+
+  Future<void> _onActiveRouteSelected(
+    MapActiveRouteSelected event,
+    Emitter<MapRoutesState> emit,
+  ) async {
+    if (!state.selectedRoutes.contains(event.route)) {
+      add(MapRouteSelected(event.cityId, event.route));
+      return;
+    }
+    emit(state.copyWith(activeCityId: event.cityId, activeRouteId: event.route.id));
+    await _persistSelection();
+  }
+
+  Future<void> _onRouteRemoved(
+    MapRouteRemoved event,
+    Emitter<MapRoutesState> emit,
+  ) async {
+    final remainingRoutes = state.selectedRoutes
+        .where((route) => route.id != event.routeId)
+        .toList(growable: false);
+    final removedActiveRoute = state.activeRouteId == event.routeId;
+    if (!removedActiveRoute) {
+      emit(state.copyWith(selectedRoutes: remainingRoutes));
+      await _persistSelection(selectedRoutes: remainingRoutes);
+      return;
+    }
+    if (remainingRoutes.isEmpty) {
+      emit(
+        state.copyWith(
+          selectedRoutes: remainingRoutes,
+          clearActiveRouteId: true,
+        ),
+      );
+      await _persistSelection(
+        selectedRoutes: remainingRoutes,
+        activeRouteId: null,
+      );
+      return;
+    }
+    final fallbackRoute = remainingRoutes.last;
+    emit(
+      state.copyWith(
+        selectedRoutes: remainingRoutes,
+        activeRouteId: fallbackRoute.id,
+      ),
+    );
+    await _persistSelection(
+      selectedRoutes: remainingRoutes,
+      activeRouteId: fallbackRoute.id,
+    );
+  }
+
+  void _onStatusFilterChanged(
+    MapStatusFilterChanged event,
+    Emitter<MapRoutesState> emit,
+  ) {
+    emit(state.copyWith(selectedStatus: event.statusFilter));
+  }
+
+  void _onResetRequested(
+    MapRoutesResetRequested event,
+    Emitter<MapRoutesState> emit,
+  ) {
     emit(const MapRoutesState());
   }
 
@@ -256,9 +466,7 @@ class MapRoutesCubit extends Cubit<MapRoutesState> {
       cityId,
       SelectedMapRoutes(
         transportType: state.transportType,
-        selectedRouteIds: routes
-            .map((route) => route.id)
-            .toList(growable: false),
+        selectedRouteIds: routes.map((route) => route.id).toList(growable: false),
         activeRouteId: activeRouteId ?? state.activeRouteId,
       ),
     );

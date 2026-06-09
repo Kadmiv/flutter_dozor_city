@@ -51,9 +51,9 @@ class _InMemorySearchRepository implements SearchRepository {
 }
 
 void main() {
-  RouteSearchCubit buildCubit() {
+  RouteSearchBloc buildCubit() {
     final repository = _InMemorySearchDraftRepository();
-    return RouteSearchCubit(
+    return RouteSearchBloc(
       loadSearchDraftUseCase: LoadSearchDraftUseCase(repository),
       saveSearchDraftUseCase: SaveSearchDraftUseCase(repository),
       toggleTransportTypeUseCase: const ToggleTransportTypeUseCase(),
@@ -62,9 +62,9 @@ void main() {
     );
   }
 
-  PointSelectCubit buildPointSelectCubit() {
+  PointSelectBloc buildPointSelectCubit() {
     final searchRepository = _InMemorySearchRepository();
-    return PointSelectCubit(
+    return PointSelectBloc(
       searchAddressSuggestionsUseCase: SearchAddressSuggestionsUseCase(
         searchRepository,
       ),
@@ -81,7 +81,7 @@ void main() {
           home: Scaffold(
             body: RouteSearchPage(
               cubit: cubit,
-              createPointSelectCubit: buildPointSelectCubit,
+              createPointSelectBloc: buildPointSelectCubit,
             ),
           ),
         ),
@@ -119,7 +119,7 @@ void main() {
           home: Scaffold(
             body: RouteSearchPage(
               cubit: cubit,
-              createPointSelectCubit: buildPointSelectCubit,
+              createPointSelectBloc: buildPointSelectCubit,
             ),
           ),
         ),
@@ -147,7 +147,7 @@ void main() {
           home: Scaffold(
             body: RouteSearchPage(
               cubit: cubit,
-              createPointSelectCubit: buildPointSelectCubit,
+              createPointSelectBloc: buildPointSelectCubit,
             ),
           ),
         ),

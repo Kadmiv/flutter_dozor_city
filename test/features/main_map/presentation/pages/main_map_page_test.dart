@@ -26,11 +26,13 @@ import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_se
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
-import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/router/main_map_orchestrator.dart';
+import 'package:flutter_dozor_city/features/point_select/domain/usecases/get_current_location_use_case.dart';
+import 'package:flutter_dozor_city/features/point_select/domain/usecases/search_address_suggestions_use_case.dart';
+import 'package:flutter_dozor_city/features/point_select/presentation/bloc/point_select_cubit.dart';
 import 'package:flutter_dozor_city/features/route_preview/presentation/bloc/route_preview_cubit.dart';
 import 'package:flutter_dozor_city/core/time/app_clock.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_result.dart';
@@ -117,17 +119,26 @@ class _FakeSearchRepository implements SearchRepository {
   Future<List<RouteResult>> searchRoutes(SearchParams params) async => const [];
 }
 
-CitySelectionCubit _buildCitySelectionCubit(
+CitySelectionBloc _buildCitySelectionBloc(
   _FakeCityRepository repository,
   _FakeSessionRepository session,
 ) {
-  return CitySelectionCubit(
+  return CitySelectionBloc(
     getCitiesUseCase: GetCitiesUseCase(repository),
     selectCityUseCase: SelectCityUseCase(
       cityRepository: repository,
       sessionRepository: session,
       checkCityDataFreshnessUseCase: CheckCityDataFreshnessUseCase(repository),
     ),
+  );
+}
+
+PointSelectBloc _buildPointSelectBloc(_FakeSearchRepository repository) {
+  return PointSelectBloc(
+    searchAddressSuggestionsUseCase: SearchAddressSuggestionsUseCase(
+      repository,
+    ),
+    getCurrentLocationUseCase: GetCurrentLocationUseCase(repository),
   );
 }
 
@@ -216,17 +227,17 @@ void main() {
 
     Future<
       ({
-        MainMapCubit mainMapCubit,
-        MapOverlaysCubit overlaysCubit,
-        MapRoutesCubit routesCubit,
-        MapArrivalsCubit arrivalsCubit,
-        LiveTrackingCubit liveTrackingCubit,
+        MainMapBloc mainMapCubit,
+        MapRoutesBloc routesCubit,
+        MapArrivalsBloc arrivalsCubit,
+        LiveTrackingBloc liveTrackingCubit,
       })
     >
     pumpPage(WidgetTester tester) async {
       final repository = _FakeCityRepository();
       final session = _FakeSessionRepository(city: city);
-      final mainMapCubit = MainMapCubit(
+      final searchRepository = _FakeSearchRepository();
+      final mainMapCubit = MainMapBloc(
         getSelectedCityUseCase: GetSelectedCityUseCase(session),
         getMapCameraUseCase: GetMapCameraUseCase(session),
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
@@ -237,37 +248,31 @@ void main() {
         ),
       );
 
-      final routesCubit = MapRoutesCubit(
+      final routesCubit = MapRoutesBloc(
         getRoutesByTypeUseCase: GetRoutesByTypeUseCase(repository),
         getSelectedMapRoutesUseCase: GetSelectedMapRoutesUseCase(session),
         saveSelectedMapRoutesUseCase: SaveSelectedMapRoutesUseCase(session),
       );
-      final routePreviewCubit = RoutePreviewCubit();
-      final mapLanguageCubit = MapLanguageCubit(
+      final routePreviewCubit = RoutePreviewBloc();
+      final mapLanguageCubit = MapLanguageBloc(
         getMapLanguageUseCase: GetMapLanguageUseCase(session),
         saveMapLanguageUseCase: SaveMapLanguageUseCase(session),
       );
-      final mapRoutePlanningCubit = MapRoutePlanningCubit(
+      final mapRoutePlanningCubit = MapRoutePlanningBloc(
         searchRoutesUseCase: SearchRoutesUseCase(_FakeSearchRepository()),
-        routePreviewCubit: routePreviewCubit,
+        routePreviewBloc: routePreviewCubit,
       );
-      final overlaysCubit = MapOverlaysCubit(
-        getRoutesByTypeUseCase: GetRoutesByTypeUseCase(repository),
+      final arrivalsCubit = MapArrivalsBloc(
         getRouteZonesUseCase: GetRouteZonesUseCase(repository),
         getArrivalByZoneUseCase: GetArrivalByZoneUseCase(repository),
         pollingScheduler: FakePollingScheduler(),
       );
-      final arrivalsCubit = MapArrivalsCubit(
-        getRouteZonesUseCase: GetRouteZonesUseCase(repository),
-        getArrivalByZoneUseCase: GetArrivalByZoneUseCase(repository),
-        pollingScheduler: FakePollingScheduler(),
-      );
-      final liveTrackingCubit = LiveTrackingCubit(
+      final liveTrackingCubit = LiveTrackingBloc(
         getCityVehiclesUseCase: GetCityVehiclesUseCase(repository),
         pollingScheduler: FakePollingScheduler(),
         clock: const SystemClock(),
       );
-      final mapStopsCubit = MapStopsCubit(
+      final mapStopsCubit = MapStopsBloc(
         getCityStopsUseCase: GetCityStopsUseCase(repository),
       );
 
@@ -278,7 +283,6 @@ void main() {
             builder: (context, state, child) => MainMapOrchestrator(
               mainMapCubit: mainMapCubit,
               liveTrackingCubit: liveTrackingCubit,
-              mapOverlaysCubit: overlaysCubit,
               mapRoutesCubit: routesCubit,
               mapArrivalsCubit: arrivalsCubit,
               mapStopsCubit: mapStopsCubit,
@@ -286,8 +290,10 @@ void main() {
               mapLanguageCubit: mapLanguageCubit,
               mapRoutePlanningCubit: mapRoutePlanningCubit,
               mapController: FlutterMapControllerAdapter(),
-              createCitySelectionCubit: () =>
-                  _buildCitySelectionCubit(repository, session),
+              createPointSelectBloc: () =>
+                  _buildPointSelectBloc(searchRepository),
+              createCitySelectionBloc: () =>
+                  _buildCitySelectionBloc(repository, session),
               child: child,
             ),
             routes: [
@@ -310,7 +316,6 @@ void main() {
 
       return (
         mainMapCubit: mainMapCubit,
-        overlaysCubit: overlaysCubit,
         routesCubit: routesCubit,
         arrivalsCubit: arrivalsCubit,
         liveTrackingCubit: liveTrackingCubit,

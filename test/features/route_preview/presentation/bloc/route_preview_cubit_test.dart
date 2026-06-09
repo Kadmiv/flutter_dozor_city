@@ -8,7 +8,7 @@ import 'package:flutter_dozor_city/features/route_preview/domain/usecases/build_
 import 'package:flutter_dozor_city/features/route_preview/presentation/bloc/route_preview_cubit.dart';
 
 void main() {
-  group('RoutePreviewCubit', () {
+  group('RoutePreviewBloc', () {
     const route = RouteResult(
       id: 'preview-1',
       title: 'Маршрут preview',
@@ -32,8 +32,8 @@ void main() {
       source: SelectedPointSource.address,
     );
 
-    test('show with search params sets route, points and preview camera', () {
-      final cubit = RoutePreviewCubit(
+    test('show with search params sets route, points and preview camera', () async {
+      final cubit = RoutePreviewBloc(
         buildPreviewCameraUseCase: const BuildPreviewCameraUseCase(),
       );
 
@@ -45,6 +45,7 @@ void main() {
           transportTypes: {0},
         ),
       );
+      await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.route, route);
       expect(cubit.state.start, start);
@@ -59,8 +60,8 @@ void main() {
       );
     });
 
-    test('show without search params keeps previous camera and preserves route points', () {
-      final cubit = RoutePreviewCubit(
+    test('show without search params keeps previous camera and preserves route points', () async {
+      final cubit = RoutePreviewBloc(
         buildPreviewCameraUseCase: const BuildPreviewCameraUseCase(),
       );
       cubit.show(
@@ -71,11 +72,13 @@ void main() {
           transportTypes: {0},
         ),
       );
+      await Future<void>.delayed(Duration.zero);
 
       final previousCamera = cubit.state.camera;
       final nextRoute = route.copyWith();
 
       cubit.show(nextRoute);
+      await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.route, nextRoute);
       expect(cubit.state.camera, previousCamera);
@@ -83,8 +86,8 @@ void main() {
       expect(cubit.state.end, end);
     });
 
-    test('show without search params uses route real points when available', () {
-      final cubit = RoutePreviewCubit(
+    test('show without search params uses route real points when available', () async {
+      final cubit = RoutePreviewBloc(
         buildPreviewCameraUseCase: const BuildPreviewCameraUseCase(),
       );
       const routeWithPoints = RouteResult(
@@ -100,6 +103,7 @@ void main() {
       );
 
       cubit.show(routeWithPoints);
+      await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.start, isNotNull);
       expect(cubit.state.end, isNotNull);
@@ -108,8 +112,8 @@ void main() {
       expect(cubit.state.camera, isNotNull);
     });
 
-    test('clear removes route, camera and points', () {
-      final cubit = RoutePreviewCubit(
+    test('clear removes route, camera and points', () async {
+      final cubit = RoutePreviewBloc(
         buildPreviewCameraUseCase: const BuildPreviewCameraUseCase(),
       );
       cubit.show(
@@ -120,8 +124,10 @@ void main() {
           transportTypes: {0},
         ),
       );
+      await Future<void>.delayed(Duration.zero);
 
       cubit.clear();
+      await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.route, isNull);
       expect(cubit.state.camera, isNull);

@@ -28,7 +28,6 @@ import 'package:flutter_dozor_city/features/main_map/domain/usecases/main_map_se
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
-import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
@@ -80,7 +79,7 @@ abstract final class FeaturesModule {
       ),
     );
     injector.registerFactory(
-      () => CitySelectionCubit(
+      () => CitySelectionBloc(
         getCitiesUseCase: injector(),
         selectCityUseCase: injector(),
       ),
@@ -91,7 +90,7 @@ abstract final class FeaturesModule {
       () => GetCityVehiclesUseCase(injector<CityRepository>()),
     );
     injector.registerFactory(
-      () => LiveTrackingCubit(
+      () => LiveTrackingBloc(
         getCityVehiclesUseCase: injector(),
         pollingScheduler: injector<PollingScheduler>(),
         clock: injector<AppClock>(),
@@ -131,7 +130,7 @@ abstract final class FeaturesModule {
     );
 
     injector.registerFactory(
-      () => MainMapCubit(
+      () => MainMapBloc(
         getSelectedCityUseCase: injector(),
         getMapCameraUseCase: injector(),
         saveMapCameraUseCase: injector(),
@@ -156,38 +155,29 @@ abstract final class FeaturesModule {
     );
 
     injector.registerFactory(
-      () => MapRoutesCubit(
+      () => MapRoutesBloc(
         getRoutesByTypeUseCase: injector(),
         getSelectedMapRoutesUseCase: injector(),
         saveSelectedMapRoutesUseCase: injector(),
       ),
     );
     injector.registerFactory(
-      () => MapLanguageCubit(
+      () => MapLanguageBloc(
         getMapLanguageUseCase: injector(),
         saveMapLanguageUseCase: injector(),
       ),
     );
 
     injector.registerFactory(
-      () => MapArrivalsCubit(
+      () => MapArrivalsBloc(
         getRouteZonesUseCase: injector(),
         getArrivalByZoneUseCase: injector(),
         pollingScheduler: injector<PollingScheduler>(),
       ),
     );
     injector.registerFactory(
-      () => MapStopsCubit(
+      () => MapStopsBloc(
         getCityStopsUseCase: injector(),
-      ),
-    );
-
-    injector.registerFactory(
-      () => MapOverlaysCubit(
-        getRoutesByTypeUseCase: injector(),
-        getRouteZonesUseCase: injector(),
-        getArrivalByZoneUseCase: injector(),
-        pollingScheduler: injector<PollingScheduler>(),
       ),
     );
 
@@ -199,18 +189,18 @@ abstract final class FeaturesModule {
       () => SearchAddressSuggestionsUseCase(injector<SearchRepository>()),
     );
     injector.registerFactory(
-      () => PointSelectCubit(
+      () => PointSelectBloc(
         getCurrentLocationUseCase: injector(),
         searchAddressSuggestionsUseCase: injector(),
       ),
     );
 
     // Route Preview
-    injector.registerSingleton<RoutePreviewCubit>(RoutePreviewCubit());
+    injector.registerSingleton<RoutePreviewBloc>(RoutePreviewBloc());
     injector.registerFactory(
-      () => MapRoutePlanningCubit(
+      () => MapRoutePlanningBloc(
         searchRoutesUseCase: injector(),
-        routePreviewCubit: injector<RoutePreviewCubit>(),
+        routePreviewBloc: injector<RoutePreviewBloc>(),
       ),
     );
 
@@ -219,7 +209,7 @@ abstract final class FeaturesModule {
       () => SearchRoutesUseCase(injector<SearchRepository>()),
     );
     injector.registerFactory(
-      () => RouteResultsCubit(
+      () => RouteResultsBloc(
         searchRoutesUseCase: injector(),
         getStoredRoutesUseCase: injector(),
         watchStoredRoutesUseCase: injector(),
@@ -238,7 +228,7 @@ abstract final class FeaturesModule {
     injector.registerFactory(() => const SwapSearchPointsUseCase());
     injector.registerFactory(() => const ValidateRouteSearchUseCase());
     injector.registerFactory(
-      () => RouteSearchCubit(
+      () => RouteSearchBloc(
         loadSearchDraftUseCase: injector(),
         saveSearchDraftUseCase: injector(),
         toggleTransportTypeUseCase: injector(),
@@ -261,7 +251,7 @@ abstract final class FeaturesModule {
       () => ToggleStoredRouteUseCase(injector<StoredRoutesRepository>()),
     );
     injector.registerFactory(
-      () => StoredRoutesCubit(
+      () => StoredRoutesBloc(
         getStoredRoutesUseCase: injector(),
         watchStoredRoutesUseCase: injector(),
         deleteStoredRouteUseCase: injector(),

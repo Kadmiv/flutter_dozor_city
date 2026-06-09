@@ -14,7 +14,7 @@ class PointSelectRouter extends FeatureRouter {
           path: '/point-select',
           name: AppRouteNames.pointSelect,
           builder: (context, state) => PointSelectPage(
-            cubit: injector<PointSelectCubit>(),
+            cubit: injector<PointSelectBloc>(),
           ),
         ),
       ];

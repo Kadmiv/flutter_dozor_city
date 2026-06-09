@@ -8,7 +8,7 @@ import 'package:flutter_dozor_city/features/route_results/presentation/widgets/l
 class RouteResultsPage extends StatelessWidget {
   const RouteResultsPage({super.key, required this.cubit});
 
-  final RouteResultsCubit cubit;
+  final RouteResultsBloc cubit;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class RouteResultsPage extends StatelessWidget {
       value: cubit,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-        child: BlocConsumer<RouteResultsCubit, RouteResultsState>(
+        child: BlocConsumer<RouteResultsBloc, RouteResultsState>(
           listenWhen: (previous, current) =>
               previous.failure != current.failure && current.failure != null,
           listener: (context, state) {
@@ -68,20 +68,26 @@ class RouteResultsPage extends StatelessWidget {
                   ],
                   trailing: IconButton(
                     onPressed: () =>
-                        context.read<RouteResultsCubit>().toggleStored(result),
+                        context
+                            .read<RouteResultsBloc>()
+                            .add(RouteResultsToggleStoredRequested(result)),
                     icon: Icon(
                       result.isStored ? Icons.bookmark : Icons.bookmark_border,
                     ),
                   ),
                   onPrimaryAction: () {
-                    context.read<RoutePreviewCubit>().show(
-                          result,
-                          searchParams: state.params,
+                    context.read<RoutePreviewBloc>().add(
+                          RoutePreviewShown(
+                            result,
+                            searchParams: state.params,
+                          ),
                         );
                   },
                   primaryActionLabel: 'Показати',
                   onSecondaryAction: () =>
-                      context.read<RouteResultsCubit>().toggleStored(result),
+                      context
+                          .read<RouteResultsBloc>()
+                          .add(RouteResultsToggleStoredRequested(result)),
                   secondaryActionLabel:
                       result.isStored ? 'Видалити' : 'Зберегти',
                   secondaryActionIcon: result.isStored

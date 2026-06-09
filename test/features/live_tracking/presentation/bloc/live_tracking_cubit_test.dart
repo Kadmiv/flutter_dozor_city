@@ -14,14 +14,14 @@ import 'package:flutter_dozor_city/features/live_tracking/domain/usecases/get_ci
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 
 void main() {
-  group('LiveTrackingCubit', () {
+  group('LiveTrackingBloc', () {
     test('calculates speed after second response', () async {
       final repository = _FakeCityRepository([
         [_vehicle(lat: 41, lng: 41, speed: 0)],
         [_vehicle(lat: 41.0001, lng: 41.0001, speed: 0)],
       ]);
       final clock = _FakeClock(DateTime(2026, 1, 1, 12));
-      final cubit = LiveTrackingCubit(
+      final cubit = LiveTrackingBloc(
         getCityVehiclesUseCase: GetCityVehiclesUseCase(repository),
         pollingScheduler: _FakePollingScheduler(),
         clock: clock,
@@ -49,7 +49,7 @@ void main() {
         [_vehicle(lat: 41.0001, lng: 41.0001, speed: 25)],
       ]);
       final clock = _FakeClock(DateTime(2026, 1, 1, 12));
-      final cubit = LiveTrackingCubit(
+      final cubit = LiveTrackingBloc(
         getCityVehiclesUseCase: GetCityVehiclesUseCase(repository),
         pollingScheduler: _FakePollingScheduler(),
         clock: clock,

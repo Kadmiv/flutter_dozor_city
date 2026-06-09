@@ -8,7 +8,7 @@ import 'package:flutter_dozor_city/features/stored_routes/presentation/bloc/stor
 class StoredRoutesPage extends StatelessWidget {
   const StoredRoutesPage({super.key, required this.cubit});
 
-  final StoredRoutesCubit cubit;
+  final StoredRoutesBloc cubit;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class StoredRoutesPage extends StatelessWidget {
       value: cubit,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-        child: BlocBuilder<StoredRoutesCubit, StoredRoutesState>(
+        child: BlocBuilder<StoredRoutesBloc, StoredRoutesState>(
           builder: (context, state) {
             if (state.isLoading) {
               return const Center(child: CircularProgressIndicator());
@@ -50,11 +50,14 @@ class StoredRoutesPage extends StatelessWidget {
                   ],
                   trailing: IconButton(
                     onPressed: () =>
-                        context.read<StoredRoutesCubit>().deleteRoute(route.id),
+                        context
+                            .read<StoredRoutesBloc>()
+                            .add(StoredRouteDeleteRequested(route.id)),
                     icon: const Icon(Icons.delete_outline),
                   ),
-                  onPrimaryAction: () =>
-                      context.read<RoutePreviewCubit>().show(route),
+                  onPrimaryAction: () => context.read<RoutePreviewBloc>().add(
+                        RoutePreviewShown(route),
+                      ),
                   primaryActionLabel: 'Показати',
                 );
               },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/app_lat_lng.dart';
+import 'package:flutter_dozor_city/core/domain/entities/selected_point.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_zone.dart';
 import 'package:flutter_dozor_city/core/domain/entities/transport_route.dart';
 import 'package:flutter_dozor_city/core/domain/entities/route_status_filter.dart';
@@ -25,6 +26,12 @@ class RoutePreviewMapLayer extends StatelessWidget {
     this.onCityStopTap,
     required this.onCameraIdle,
     this.onMapTap,
+    this.onPreviewStartChanged,
+    this.onPreviewStartDragEnded,
+    this.onPreviewEndChanged,
+    this.onPreviewEndDragEnded,
+    this.previewStart,
+    this.previewEnd,
     this.routePolylines = const [],
   });
 
@@ -38,15 +45,21 @@ class RoutePreviewMapLayer extends StatelessWidget {
   final Future<void> Function(RouteZone)? onCityStopTap;
   final VoidCallback onCameraIdle;
   final ValueChanged<AppLatLng>? onMapTap;
+  final ValueChanged<AppLatLng>? onPreviewStartChanged;
+  final ValueChanged<AppLatLng>? onPreviewStartDragEnded;
+  final ValueChanged<AppLatLng>? onPreviewEndChanged;
+  final ValueChanged<AppLatLng>? onPreviewEndDragEnded;
+  final SelectedPoint? previewStart;
+  final SelectedPoint? previewEnd;
   final List<TransportRoute> routePolylines;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+    return BlocBuilder<MapRoutesBloc, MapRoutesState>(
       builder: (context, mapRoutesState) {
-        return BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
+        return BlocBuilder<MapArrivalsBloc, MapArrivalsState>(
           builder: (context, _) {
-            return BlocBuilder<RoutePreviewCubit, RoutePreviewState>(
+            return BlocBuilder<RoutePreviewBloc, RoutePreviewState>(
               builder: (context, previewState) {
                 final selectedRoutes = mapRoutesState.selectedRoutes;
                 final routesToDraw = routePolylines.isEmpty
@@ -65,11 +78,15 @@ class RoutePreviewMapLayer extends StatelessWidget {
                   routePolylines: routesToDraw,
                   previewGeometry:
                       previewState.route?.previewGeometry ?? const [],
-                  previewStart: previewState.start,
-                  previewEnd: previewState.end,
+                  previewStart: previewStart ?? previewState.start,
+                  previewEnd: previewEnd ?? previewState.end,
                   selectedRouteStatus:
                       mapRoutesState.selectedStatus.statusValue,
                   onMapTap: onMapTap,
+                  onPreviewStartChanged: onPreviewStartChanged,
+                  onPreviewStartDragEnded: onPreviewStartDragEnded,
+                  onPreviewEndChanged: onPreviewEndChanged,
+                  onPreviewEndDragEnded: onPreviewEndDragEnded,
                   onCameraIdle: onCameraIdle,
                 );
               },

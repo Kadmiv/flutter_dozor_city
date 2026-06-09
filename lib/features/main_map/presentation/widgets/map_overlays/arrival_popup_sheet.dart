@@ -24,7 +24,7 @@ class ArrivalPopupSheet extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: BlocBuilder<MapArrivalsCubit, MapArrivalsState>(
+            child: BlocBuilder<MapArrivalsBloc, MapArrivalsState>(
               builder: (context, state) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,9 +6,7 @@ import 'package:flutter_dozor_city/features/city_selection/presentation/bloc/cit
 import 'package:flutter_dozor_city/features/live_tracking/presentation/bloc/live_tracking_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/main_map_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_language_cubit.dart';
-import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_overlays_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_route_planning_cubit.dart';
-
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_routes_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_arrivals_cubit.dart';
 import 'package:flutter_dozor_city/features/main_map/presentation/bloc/map_stops_cubit.dart';
@@ -27,22 +25,22 @@ import 'package:go_router/go_router.dart';
 class MainMapRouter extends FeatureRouter {
   const MainMapRouter();
 
-  MainMapCubit get _mainMapCubit => injector<MainMapCubit>();
+  MainMapBloc get _mainMapCubit => injector<MainMapBloc>();
 
-  LiveTrackingCubit get _liveTrackingCubit => injector<LiveTrackingCubit>();
+  LiveTrackingBloc get _liveTrackingCubit => injector<LiveTrackingBloc>();
 
-  MapRoutesCubit get _mapRoutesCubit => injector<MapRoutesCubit>();
+  MapRoutesBloc get _mapRoutesCubit => injector<MapRoutesBloc>();
 
-  MapArrivalsCubit get _mapArrivalsCubit => injector<MapArrivalsCubit>();
+  MapArrivalsBloc get _mapArrivalsCubit => injector<MapArrivalsBloc>();
 
-  MapStopsCubit get _mapStopsCubit => injector<MapStopsCubit>();
+  MapStopsBloc get _mapStopsCubit => injector<MapStopsBloc>();
 
-  RoutePreviewCubit get _routePreviewCubit => injector<RoutePreviewCubit>();
+  RoutePreviewBloc get _routePreviewCubit => injector<RoutePreviewBloc>();
 
-  MapLanguageCubit get _mapLanguageCubit => injector<MapLanguageCubit>();
+  MapLanguageBloc get _mapLanguageCubit => injector<MapLanguageBloc>();
 
-  MapRoutePlanningCubit get _mapRoutePlanningCubit =>
-      injector<MapRoutePlanningCubit>();
+  MapRoutePlanningBloc get _mapRoutePlanningCubit =>
+      injector<MapRoutePlanningBloc>();
 
   @override
   List<RouteBase> get routes => [
@@ -50,7 +48,6 @@ class MainMapRouter extends FeatureRouter {
       builder: (context, state, child) => MainMapOrchestrator(
         mainMapCubit: _mainMapCubit,
         liveTrackingCubit: _liveTrackingCubit,
-        mapOverlaysCubit: injector<MapOverlaysCubit>(),
         mapRoutesCubit: _mapRoutesCubit,
         mapArrivalsCubit: _mapArrivalsCubit,
         mapStopsCubit: _mapStopsCubit,
@@ -58,7 +55,8 @@ class MainMapRouter extends FeatureRouter {
         mapLanguageCubit: _mapLanguageCubit,
         mapRoutePlanningCubit: _mapRoutePlanningCubit,
         mapController: injector<MapController>(),
-        createCitySelectionCubit: () => injector<CitySelectionCubit>(),
+        createPointSelectBloc: () => injector<PointSelectBloc>(),
+        createCitySelectionBloc: () => injector<CitySelectionBloc>(),
         child: child,
       ),
       routes: [
@@ -66,8 +64,8 @@ class MainMapRouter extends FeatureRouter {
           path: '/main-map/search',
           name: AppRouteNames.search,
           builder: (context, state) => RouteSearchPage(
-            cubit: injector<RouteSearchCubit>(),
-            createPointSelectCubit: () => injector<PointSelectCubit>(),
+            cubit: injector<RouteSearchBloc>(),
+            createPointSelectBloc: () => injector<PointSelectBloc>(),
           ),
         ),
         GoRoute(
@@ -76,7 +74,7 @@ class MainMapRouter extends FeatureRouter {
           builder: (context, state) {
             final args = state.extra as RouteResultsArgs?;
             return RouteResultsPage(
-              cubit: injector<RouteResultsCubit>()..load(args?.params),
+              cubit: injector<RouteResultsBloc>()..load(args?.params),
             );
           },
         ),
@@ -84,7 +82,7 @@ class MainMapRouter extends FeatureRouter {
           path: '/main-map/stored',
           name: AppRouteNames.stored,
           builder: (context, state) =>
-              StoredRoutesPage(cubit: injector<StoredRoutesCubit>()),
+              StoredRoutesPage(cubit: injector<StoredRoutesBloc>()),
         ),
       ],
     ),

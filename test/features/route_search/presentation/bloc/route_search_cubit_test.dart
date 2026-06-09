@@ -26,10 +26,10 @@ class _InMemorySearchDraftRepository implements SearchDraftRepository {
 }
 
 void main() {
-  group('RouteSearchCubit', () {
-    test('returns validation error when points are missing', () {
+  group('RouteSearchBloc', () {
+    test('returns validation error when points are missing', () async {
       final draftRepository = _InMemorySearchDraftRepository();
-      final cubit = RouteSearchCubit(
+      final cubit = RouteSearchBloc(
         loadSearchDraftUseCase: LoadSearchDraftUseCase(draftRepository),
         saveSearchDraftUseCase: SaveSearchDraftUseCase(draftRepository),
         toggleTransportTypeUseCase: const ToggleTransportTypeUseCase(),
@@ -38,14 +38,15 @@ void main() {
       );
 
       final result = cubit.validate();
+      await Future<void>.delayed(Duration.zero);
 
       expect(result, isNull);
       expect(cubit.state.errorText, 'Заповніть точки Від та До');
     });
 
-    test('builds params when form is complete', () {
+    test('builds params when form is complete', () async {
       final draftRepository = _InMemorySearchDraftRepository();
-      final cubit = RouteSearchCubit(
+      final cubit = RouteSearchBloc(
         loadSearchDraftUseCase: LoadSearchDraftUseCase(draftRepository),
         saveSearchDraftUseCase: SaveSearchDraftUseCase(draftRepository),
         toggleTransportTypeUseCase: const ToggleTransportTypeUseCase(),
@@ -68,7 +69,9 @@ void main() {
 
       cubit.setStart(start);
       cubit.setEnd(end);
+      await Future<void>.delayed(Duration.zero);
       final result = cubit.validate();
+      await Future<void>.delayed(Duration.zero);
 
       expect(result, isNotNull);
       expect(result!.start, start);

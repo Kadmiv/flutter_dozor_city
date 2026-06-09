@@ -10,12 +10,12 @@ class MapActionsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MainMapCubit, MainMapState>(
+    return BlocBuilder<MainMapBloc, MainMapState>(
       builder: (context, state) {
         return Row(
           children: [
             FilledButton.tonalIcon(
-              onPressed: () => context.read<MainMapCubit>().toggleMarkers(),
+              onPressed: () => context.read<MainMapBloc>().toggleMarkers(),
               icon: Icon(
                 state.showMarkers ? Icons.visibility : Icons.visibility_off,
               ),

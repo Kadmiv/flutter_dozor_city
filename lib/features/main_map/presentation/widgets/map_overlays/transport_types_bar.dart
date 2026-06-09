@@ -8,7 +8,7 @@ class TransportTypesBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MapRoutesCubit, MapRoutesState>(
+    return BlocBuilder<MapRoutesBloc, MapRoutesState>(
       builder: (context, state) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -20,14 +20,14 @@ class TransportTypesBar extends StatelessWidget {
                 label: Text('Тип ${index + 1}'),
                 selected: state.transportType == index,
                 onSelected: (_) {
-                  final cityId = context.read<MainMapCubit>().state.city?.id;
+                  final cityId = context.read<MainMapBloc>().state.city?.id;
                   if (cityId == null) {
                     return;
                   }
-                  context.read<MainMapCubit>()
+                  context.read<MainMapBloc>()
                     ..setRouteMode(MainMapMode.routes)
                     ..setActiveMapActionLabel('Тип транспорту ${index + 1}');
-                  context.read<MapRoutesCubit>().selectTransportType(
+                  context.read<MapRoutesBloc>().selectTransportType(
                         cityId: cityId,
                         type: index,
                       );

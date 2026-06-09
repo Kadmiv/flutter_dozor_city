@@ -30,6 +30,10 @@ class GoogleMapSurface extends StatefulWidget {
     this.previewEnd,
     this.selectedRouteStatus,
     this.onMapTap,
+    this.onPreviewStartChanged,
+    this.onPreviewStartDragEnded,
+    this.onPreviewEndChanged,
+    this.onPreviewEndDragEnded,
     this.onCameraIdle,
   });
 
@@ -47,6 +51,10 @@ class GoogleMapSurface extends StatefulWidget {
   final SelectedPoint? previewEnd;
   final int? selectedRouteStatus;
   final ValueChanged<AppLatLng>? onMapTap;
+  final ValueChanged<AppLatLng>? onPreviewStartChanged;
+  final ValueChanged<AppLatLng>? onPreviewStartDragEnded;
+  final ValueChanged<AppLatLng>? onPreviewEndChanged;
+  final ValueChanged<AppLatLng>? onPreviewEndDragEnded;
   final ValueChanged<gmaps.CameraPosition>? onCameraIdle;
 
   @override
@@ -213,6 +221,19 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
             gmaps.BitmapDescriptor.hueGreen,
           ),
           infoWindow: gmaps.InfoWindow(title: 'Старт', snippet: start.label),
+          draggable:
+              widget.onPreviewStartChanged != null ||
+              widget.onPreviewStartDragEnded != null,
+          onDrag: widget.onPreviewStartChanged == null
+              ? null
+              : (position) => widget.onPreviewStartChanged!(
+                  AppLatLng(lat: position.latitude, lng: position.longitude),
+                ),
+          onDragEnd: widget.onPreviewStartDragEnded == null
+              ? null
+              : (position) => widget.onPreviewStartDragEnded!(
+                  AppLatLng(lat: position.latitude, lng: position.longitude),
+                ),
         ),
       );
     }
@@ -227,6 +248,19 @@ class _GoogleMapSurfaceState extends State<GoogleMapSurface> {
             gmaps.BitmapDescriptor.hueRed,
           ),
           infoWindow: gmaps.InfoWindow(title: 'Фініш', snippet: end.label),
+          draggable:
+              widget.onPreviewEndChanged != null ||
+              widget.onPreviewEndDragEnded != null,
+          onDrag: widget.onPreviewEndChanged == null
+              ? null
+              : (position) => widget.onPreviewEndChanged!(
+                  AppLatLng(lat: position.latitude, lng: position.longitude),
+                ),
+          onDragEnd: widget.onPreviewEndDragEnded == null
+              ? null
+              : (position) => widget.onPreviewEndDragEnded!(
+                  AppLatLng(lat: position.latitude, lng: position.longitude),
+                ),
         ),
       );
     }

@@ -14,7 +14,7 @@ class CitySelectionRouter extends FeatureRouter {
           path: '/select-city',
           name: AppRouteNames.selectCity,
           builder: (context, state) => SelectCityPage(
-            cubit: injector<CitySelectionCubit>(),
+            cubit: injector<CitySelectionBloc>(),
           ),
         ),
       ];

@@ -18,14 +18,14 @@ class RouteZonesWrap extends StatelessWidget {
           .map(
             (zone) => GestureDetector(
               onTap: () {
-                final cityId = context.read<MainMapCubit>().state.city?.id;
+                final cityId = context.read<MainMapBloc>().state.city?.id;
                 if (cityId == null) {
                   return;
                 }
-                context.read<MainMapCubit>().setActiveMapActionLabel(
+                context.read<MainMapBloc>().setActiveMapActionLabel(
                   'Зупинка ${zone.name}',
                 );
-                context.read<MapArrivalsCubit>().loadArrival(
+                context.read<MapArrivalsBloc>().loadArrival(
                   cityId: cityId,
                   zoneId: zone.id,
                 );

@@ -1,3 +1,6 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dozor_city/core/domain/entities/city.dart';
 import 'package:flutter_dozor_city/core/map/app_map_camera.dart';
@@ -8,7 +11,85 @@ enum MainMapTab { search, results, stored }
 
 enum MainMapMode { city, routes }
 
-class MainMapState {
+sealed class MainMapEvent extends Equatable {
+  const MainMapEvent();
+
+  @override
+  List<Object?> get props => const [];
+}
+
+final class MainMapStarted extends MainMapEvent {
+  const MainMapStarted({this.forceCityCenter = false});
+
+  final bool forceCityCenter;
+
+  @override
+  List<Object?> get props => [forceCityCenter];
+}
+
+final class MainMapTabSelected extends MainMapEvent {
+  const MainMapTabSelected(this.tab);
+
+  final MainMapTab tab;
+
+  @override
+  List<Object?> get props => [tab];
+}
+
+final class MainMapBottomSheetOpened extends MainMapEvent {
+  const MainMapBottomSheetOpened({this.tab});
+
+  final MainMapTab? tab;
+
+  @override
+  List<Object?> get props => [tab];
+}
+
+final class MainMapBottomSheetClosed extends MainMapEvent {
+  const MainMapBottomSheetClosed();
+}
+
+final class MainMapMarkersToggled extends MainMapEvent {
+  const MainMapMarkersToggled();
+}
+
+final class MainMapRouteModeSet extends MainMapEvent {
+  const MainMapRouteModeSet(this.mode);
+
+  final MainMapMode mode;
+
+  @override
+  List<Object?> get props => [mode];
+}
+
+final class MainMapActionLabelSet extends MainMapEvent {
+  const MainMapActionLabelSet(this.label);
+
+  final String? label;
+
+  @override
+  List<Object?> get props => [label];
+}
+
+final class MainMapHintDismissed extends MainMapEvent {
+  const MainMapHintDismissed(this.key);
+
+  final String key;
+
+  @override
+  List<Object?> get props => [key];
+}
+
+final class MainMapCameraSaved extends MainMapEvent {
+  const MainMapCameraSaved(this.camera);
+
+  final AppMapCamera camera;
+
+  @override
+  List<Object?> get props => [camera];
+}
+
+class MainMapState extends Equatable {
   const MainMapState({
     this.city,
     this.currentTab = MainMapTab.search,
@@ -50,10 +131,22 @@ class MainMapState {
       camera: camera ?? this.camera,
     );
   }
+
+  @override
+  List<Object?> get props => [
+    city,
+    currentTab,
+    mode,
+    isBottomSheetVisible,
+    showMarkers,
+    activeMapActionLabel,
+    dismissedHints,
+    camera,
+  ];
 }
 
-class MainMapCubit extends Cubit<MainMapState> {
-  MainMapCubit({
+class MainMapBloc extends Bloc<MainMapEvent, MainMapState> {
+  MainMapBloc({
     required GetSelectedCityUseCase getSelectedCityUseCase,
     required GetMapCameraUseCase getMapCameraUseCase,
     required SaveMapCameraUseCase saveMapCameraUseCase,
@@ -66,7 +159,17 @@ class MainMapCubit extends Cubit<MainMapState> {
        _getUiFlagUseCase = getUiFlagUseCase,
        _setUiFlagUseCase = setUiFlagUseCase,
        _checkCityDataFreshnessUseCase = checkCityDataFreshnessUseCase,
-       super(MainMapState(city: getSelectedCityUseCase()));
+       super(MainMapState(city: getSelectedCityUseCase())) {
+    on<MainMapStarted>(_onStarted);
+    on<MainMapTabSelected>(_onTabSelected);
+    on<MainMapBottomSheetOpened>(_onBottomSheetOpened);
+    on<MainMapBottomSheetClosed>(_onBottomSheetClosed);
+    on<MainMapMarkersToggled>(_onMarkersToggled);
+    on<MainMapRouteModeSet>(_onRouteModeSet);
+    on<MainMapActionLabelSet>(_onActionLabelSet);
+    on<MainMapHintDismissed>(_onHintDismissed);
+    on<MainMapCameraSaved>(_onCameraSaved);
+  }
 
   final GetSelectedCityUseCase _getSelectedCityUseCase;
   final GetMapCameraUseCase _getMapCameraUseCase;
@@ -174,5 +277,133 @@ class MainMapCubit extends Cubit<MainMapState> {
     }
     await _saveMapCameraUseCase(cityId, camera);
     emit(state.copyWith(camera: camera));
+  }
+
+  Future<void> _onStarted(
+    MainMapStarted event,
+    Emitter<MainMapState> emit,
+  ) async {
+    final city = _getSelectedCityUseCase();
+    AppMapCamera? camera;
+    final dismissedHints = <String>{};
+    if (city != null) {
+      await _checkCityDataFreshnessUseCase(city.id);
+      camera = event.forceCityCenter
+          ? AppMapCamera(
+              centerLat: city.centerLat,
+              centerLng: city.centerLng,
+              zoom: city.zoom,
+            )
+          : await _getMapCameraUseCase(city.id) ??
+                AppMapCamera(
+                  centerLat: city.centerLat,
+                  centerLng: city.centerLng,
+                  zoom: city.zoom,
+                );
+    }
+    for (final key in const ['select-city', 'map-menu', 'arrival']) {
+      if (await _getUiFlagUseCase(key)) {
+        dismissedHints.add(key);
+      }
+    }
+    emit(
+      state.copyWith(
+        city: city,
+        camera: camera,
+        dismissedHints: dismissedHints,
+      ),
+    );
+  }
+
+  void _onTabSelected(
+    MainMapTabSelected event,
+    Emitter<MainMapState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        currentTab: event.tab,
+        mode: event.tab == MainMapTab.search ? MainMapMode.routes : state.mode,
+      ),
+    );
+  }
+
+  void _onBottomSheetOpened(
+    MainMapBottomSheetOpened event,
+    Emitter<MainMapState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        currentTab: event.tab ?? state.currentTab,
+        isBottomSheetVisible: true,
+        mode: (event.tab ?? state.currentTab) == MainMapTab.search
+            ? MainMapMode.routes
+            : state.mode,
+      ),
+    );
+  }
+
+  void _onBottomSheetClosed(
+    MainMapBottomSheetClosed event,
+    Emitter<MainMapState> emit,
+  ) {
+    emit(state.copyWith(isBottomSheetVisible: false));
+  }
+
+  void _onMarkersToggled(
+    MainMapMarkersToggled event,
+    Emitter<MainMapState> emit,
+  ) {
+    final next = !state.showMarkers;
+    emit(
+      state.copyWith(
+        showMarkers: next,
+        activeMapActionLabel: next ? 'Міські маркери' : 'Маркери приховані',
+      ),
+    );
+  }
+
+  void _onRouteModeSet(
+    MainMapRouteModeSet event,
+    Emitter<MainMapState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        mode: event.mode,
+        isBottomSheetVisible: event.mode == MainMapMode.city
+            ? false
+            : state.isBottomSheetVisible,
+        activeMapActionLabel: event.mode == MainMapMode.routes
+            ? 'Режим маршрутів'
+            : 'Огляд міста',
+      ),
+    );
+  }
+
+  void _onActionLabelSet(
+    MainMapActionLabelSet event,
+    Emitter<MainMapState> emit,
+  ) {
+    emit(state.copyWith(activeMapActionLabel: event.label));
+  }
+
+  Future<void> _onHintDismissed(
+    MainMapHintDismissed event,
+    Emitter<MainMapState> emit,
+  ) async {
+    final updated = Set<String>.from(state.dismissedHints)..add(event.key);
+    await _setUiFlagUseCase(event.key, true);
+    emit(state.copyWith(dismissedHints: updated));
+  }
+
+  Future<void> _onCameraSaved(
+    MainMapCameraSaved event,
+    Emitter<MainMapState> emit,
+  ) async {
+    final cityId = state.city?.id;
+    if (cityId == null) {
+      return;
+    }
+    await _saveMapCameraUseCase(cityId, event.camera);
+    emit(state.copyWith(camera: event.camera));
   }
 }

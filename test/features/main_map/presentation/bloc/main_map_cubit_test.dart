@@ -117,7 +117,7 @@ class _FakeCityRepository implements CityRepository {
 }
 
 void main() {
-  group('MainMapCubit', () {
+  group('MainMapBloc', () {
     const city = City(
       id: 'zhytomyr',
       name: 'Житомир',
@@ -136,7 +136,7 @@ void main() {
         city.id,
         const AppMapCamera(centerLat: 50.3, centerLng: 28.7, zoom: 14),
       );
-      final cubit = MainMapCubit(
+      final cubit = MainMapBloc(
         getSelectedCityUseCase: GetSelectedCityUseCase(session),
         getMapCameraUseCase: GetMapCameraUseCase(session),
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
@@ -164,7 +164,7 @@ void main() {
 
     test('dismissHint persists flag in session and updates state', () async {
       final session = _FakeSessionRepository(city: city);
-      final cubit = MainMapCubit(
+      final cubit = MainMapBloc(
         getSelectedCityUseCase: GetSelectedCityUseCase(session),
         getMapCameraUseCase: GetMapCameraUseCase(session),
         saveMapCameraUseCase: SaveMapCameraUseCase(session),
@@ -185,7 +185,7 @@ void main() {
       'openBottomSheet(search) forces routes mode and toggleMarkers updates label',
       () {
         final session = _FakeSessionRepository(city: city);
-        final cubit = MainMapCubit(
+        final cubit = MainMapBloc(
           getSelectedCityUseCase: GetSelectedCityUseCase(session),
           getMapCameraUseCase: GetMapCameraUseCase(session),
           saveMapCameraUseCase: SaveMapCameraUseCase(session),

@@ -21,7 +21,7 @@ class MapStateListener extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        BlocListener<MainMapCubit, MainMapState>(
+        BlocListener<MainMapBloc, MainMapState>(
           listenWhen: (previous, current) => previous.camera != current.camera,
           listener: (context, state) {
             final camera = state.camera;
@@ -30,7 +30,7 @@ class MapStateListener extends StatelessWidget {
             }
           },
         ),
-        BlocListener<MapRoutesCubit, MapRoutesState>(
+        BlocListener<MapRoutesBloc, MapRoutesState>(
           listenWhen: (previous, current) =>
               previous.failure != current.failure && current.failure != null,
           listener: (context, state) {
@@ -42,7 +42,7 @@ class MapStateListener extends StatelessWidget {
             }
           },
         ),
-        BlocListener<MapArrivalsCubit, MapArrivalsState>(
+        BlocListener<MapArrivalsBloc, MapArrivalsState>(
           listenWhen: (previous, current) =>
               previous.failure != current.failure && current.failure != null,
           listener: (context, state) {
@@ -54,7 +54,7 @@ class MapStateListener extends StatelessWidget {
             }
           },
         ),
-        BlocListener<MapStopsCubit, MapStopsState>(
+        BlocListener<MapStopsBloc, MapStopsState>(
           listenWhen: (previous, current) =>
               previous.failure != current.failure && current.failure != null,
           listener: (context, state) {
@@ -66,7 +66,7 @@ class MapStateListener extends StatelessWidget {
             }
           },
         ),
-        BlocListener<LiveTrackingCubit, LiveTrackingState>(
+        BlocListener<LiveTrackingBloc, LiveTrackingState>(
           listenWhen: (previous, current) =>
               previous.failure != current.failure && current.failure != null,
           listener: (context, state) {
